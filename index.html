@@ -201,7 +201,7 @@ p{margin:0}
 
 /* ── services ──────────────────────────────────────────────────────────── */
 .svc{border-top:1.5px solid var(--line)}
-.svc__row{
+.svc__row{text-decoration:none;
   display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr) minmax(210px,auto);
   gap:clamp(18px,3vw,44px);align-items:baseline;
   padding-block:clamp(26px,3.6vw,42px);border-bottom:1.5px solid var(--line);
@@ -290,9 +290,9 @@ footer{border-top:1.5px solid var(--line)}
     <nav class="nav__links">
       <a href="#work">Work</a>
       <a href="#services">Services</a>
-      <a href="#contact">Contact</a>
+      <a href="start.html">Start</a>
     </nav>
-    <a class="btn" href="https://ig.me/m/realmsystems">Message us</a>
+    <a class="btn" href="start.html">Start a job</a>
   </div>
 </header>
 
@@ -306,11 +306,11 @@ footer{border-top:1.5px solid var(--line)}
         <h1>Most local businesses are <span class="hl">invisible</span> online. We fix that.</h1>
         <p class="lead">We build the website, and the system that finds the customers to send to it.</p>
         <div class="hero__cta">
-          <a class="btn btn--accent" href="https://ig.me/m/realmsystems">
-            Message us on Instagram
+          <a class="btn btn--accent" href="start.html">
+            Start a job
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </a>
-          <span class="hero__note">Websites from $400.</span>
+          <a class="hero__note" href="https://ig.me/m/realmsystems" style="text-decoration:none;border-bottom:1px solid var(--line)">or message us on Instagram</a>
         </div>
       </div>
       <div class="hero__art reveal">
@@ -383,8 +383,8 @@ footer{border-top:1.5px solid var(--line)}
           <small>per run. It drives a browser on our own machine</small>
         </div>
         <div class="fig">
-          <b>~130</b>
-          <small>results for "walk-ins welcome" in India. Searching "cafe" returns about 25,000, led by Amazon and Nescafé</small>
+          <b>~4,100</b>
+          <small>US ads running the phrase "walk-ins welcome". Searching the word "cafe" returns over 50,000, led by Taco Bell and Capital One</small>
         </div>
       </div>
     </div>
@@ -394,21 +394,21 @@ footer{border-top:1.5px solid var(--line)}
     <div class="wrap">
       <h2 class="reveal" style="margin-bottom:clamp(24px,3.4vw,44px)">What you can hire us for</h2>
       <div class="svc reveal">
-        <div class="svc__row">
+        <a class="svc__row" href="start.html?want=website">
           <h3>Website</h3>
           <p class="body">One page, live in a week. Written from scratch.</p>
           <div class="svc__price">$400<small>one-off</small></div>
-        </div>
-        <div class="svc__row">
+        </a>
+        <a class="svc__row" href="start.html?want=leads">
           <h3>Lead engine</h3>
           <p class="body">Pointed at your city and your trade. You get a checked list every month.</p>
           <div class="svc__price">$250<small>setup, then $99 a month</small></div>
-        </div>
-        <div class="svc__row">
+        </a>
+        <a class="svc__row" href="start.html?want=automation">
           <h3>Automation or an AI agent</h3>
           <p class="body">Quoted per job, once we know what you need.</p>
           <div class="svc__price">$500<small>starting price</small></div>
-        </div>
+        </a>
       </div>
     </div>
   </section>
@@ -448,8 +448,8 @@ footer{border-top:1.5px solid var(--line)}
   <section class="close close--left" id="contact">
     <div class="wrap reveal">
       <h2>Tell us the business and the city.</h2>
-      <a class="btn btn--accent" href="https://ig.me/m/realmsystems">
-        Message us on Instagram
+      <a class="btn btn--accent" href="start.html">
+        Start a job
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>
     </div>
