@@ -113,7 +113,8 @@ p{margin:0}
   mask-image:radial-gradient(120% 80% at 65% 22%,#000 0%,transparent 72%);
   pointer-events:none;
 }
-.hero__grid{position:relative;display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:clamp(28px,5vw,64px);align-items:center}
+.hero__grid{position:relative;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.92fr);gap:clamp(28px,4vw,52px);align-items:center}
+.hero__art{display:flex;justify-content:center}
 .hero h1 .hl{color:var(--accent)}
 .hero .lead{margin-top:1.35rem;max-width:33ch}
 .hero__cta{margin-top:2.1rem;display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap}
@@ -125,9 +126,10 @@ p{margin:0}
 
 /* ── device frames ─────────────────────────────────────────────────────── */
 .phone{
-  width:min(268px,74vw);border:9px solid var(--ink);border-radius:30px;overflow:hidden;
+  width:min(400px,80vw);border:11px solid var(--ink);border-radius:38px;overflow:hidden;
   background:#fff;box-shadow:var(--shadow-lg);
 }
+@media (max-width:900px){.phone{width:min(330px,78vw);border-width:9px;border-radius:30px}}
 .phone img{width:100%}
 .phone--tilt{transform:rotate(1.6deg)}
 

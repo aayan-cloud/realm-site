@@ -270,13 +270,32 @@ var DM = 'https://ig.me/m/realmsystems';
       if (!el.value.trim()) { el.focus(); say('Fill in ' + required[i] + '.', false); return; }
     }
 
+    var data = new FormData(form);
+
+    // No endpoint deployed yet: rather than lose the submission, put it on the
+    // clipboard and open the DM so the visitor pastes it in one action. Not as
+    // good as the sheet, but it is a path that works with no backend at all.
     if (!ENDPOINT) {
-      say('The form is not connected yet. Message us on Instagram and we will pick it up there.', false);
-      window.open(DM, '_blank', 'noopener');
+      var lines = ['Enquiry from the site', ''];
+      data.forEach(function (v, k) { if (String(v).trim()) lines.push(k + ': ' + v); });
+      var text = lines.join('\n');
+      var opened = function () { window.open(DM, '_blank', 'noopener'); };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+          say('Copied your details. Instagram is opening - paste it into the message and send.', true);
+          opened();
+        }, function () {
+          say('Message us on Instagram with the trade and the city and we will pick it up there.', false);
+          opened();
+        });
+      } else {
+        say('Message us on Instagram with the trade and the city and we will pick it up there.', false);
+        opened();
+      }
       return;
     }
 
-    var data = new FormData(form);
     data.append('page', location.href);
     go.disabled = true;
     go.textContent = 'Sending';
