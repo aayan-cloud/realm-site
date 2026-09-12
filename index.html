@@ -39,7 +39,12 @@ html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;overflow-x:clip}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 body{
   margin:0;
-  background:var(--paper);
+  background-color:var(--paper);
+  /* The blueprint ground the diagrams sit on in the videos, carried across the
+     whole page so no section is a blank sheet. */
+  background-image:radial-gradient(rgba(15,23,42,.075) 1.3px,transparent 1.3px);
+  background-size:28px 28px;
+  background-position:0 -1px;
   color:var(--ink);
   font-family:Geist,"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
   font-size:17px;
@@ -178,7 +183,7 @@ p{margin:0}
 @media (max-width:940px){.two-up{grid-template-columns:1fr}.panel{flex-direction:column;align-items:flex-start}}
 
 /* ── numbers ───────────────────────────────────────────────────────────── */
-.figures{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1.5px solid var(--line);border-bottom:1.5px solid var(--line)}
+.figures{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1.5px solid var(--line)}
 .fig{padding:clamp(26px,3.4vw,40px) clamp(16px,2vw,30px);border-left:1.5px solid var(--line)}
 .fig:first-child{border-left:0;padding-left:0}
 .fig b{
@@ -244,17 +249,29 @@ p{margin:0}
 }
 @media (max-width:560px){.steps{grid-template-columns:1fr}}
 
-/* left-aligned closing: a centred block on a wide screen reads as a slide
-   and leaves the page feeling like everything floats in the middle. */
-.close--left{text-align:left}
-.close--left h2{margin-inline:0;max-width:20ch}
-
 /* ── closing ───────────────────────────────────────────────────────────── */
-.close{text-align:center;padding-block:clamp(64px,9vw,120px)}
-.close h2{max-width:18ch;margin-inline:auto}
+/* Left, not centred: a centred block on a wide screen leaves the page feeling
+   like everything floats in the middle. */
+.close{text-align:left;padding-block:clamp(64px,9vw,120px)}
+.close h2{max-width:20ch}
 .close .btn{margin-top:2rem}
 footer{border-top:1.5px solid var(--line)}
 .foot{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding-block:28px;font-size:.92rem;color:var(--muted);flex-wrap:wrap}
+
+/* ── texture ───────────────────────────────────────────────────────────── */
+.grain{
+  position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns=\"http://www.w3.org/2000/svg\" width=\"180\" height=\"180\"%3E%3Cfilter id=\"n\"%3E%3CfeTurbulence type=\"fractalNoise\" baseFrequency=\"0.8\" numOctaves=\"3\"/%3E%3C/filter%3E%3Crect width=\"180\" height=\"180\" filter=\"url(%23n)\"/%3E%3C/svg%3E");
+}
+
+/* A slightly deeper band behind the middle of the page, so it reads in three
+   parts instead of one long sheet. Same theme, just a deeper surface. */
+.band{
+  position:relative;
+  background:#e9edf3;
+  border-block:1.5px solid var(--line);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
+}
 
 /* ── reveal ────────────────────────────────────────────────────────────── */
 /* Scoped to html.js, which the inline script in <head> sets. Without that guard a
@@ -278,6 +295,8 @@ footer{border-top:1.5px solid var(--line)}
     <a class="btn" href="https://ig.me/m/realmsystems">Message us</a>
   </div>
 </header>
+
+<div class="grain" aria-hidden="true"></div>
 
 <main id="top">
 
@@ -347,7 +366,8 @@ footer{border-top:1.5px solid var(--line)}
     </div>
   </section>
 
-  <section class="section" style="padding-top:0">
+  <div class="band">
+  <section class="section">
     <div class="wrap">
       <div class="figures reveal">
         <div class="fig">
@@ -422,6 +442,8 @@ footer{border-top:1.5px solid var(--line)}
       </div>
     </div>
   </section>
+
+  </div>
 
   <section class="close close--left" id="contact">
     <div class="wrap reveal">
