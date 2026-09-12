@@ -1,0 +1,5 @@
+# Internal only. This repo is public because GitHub Pages needs it to be, so
+# anything that is notes-for-us rather than the site itself stays out of it.
+README.md
+design-prompt.md
+shot-*.png
