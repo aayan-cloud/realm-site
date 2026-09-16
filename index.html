@@ -163,6 +163,9 @@ p{margin:0}
   border-bottom:2px solid var(--accent);padding-bottom:2px;
 }
 .link:hover{color:var(--accent)}
+.feature--flip{margin-top:clamp(56px,8vw,104px)}
+@media (min-width:861px){.feature--flip .feature__text{order:2}}
+.shot video{display:block;width:100%;height:auto}
 @media (max-width:860px){.feature{grid-template-columns:1fr}.work__head{flex-direction:column;align-items:flex-start;gap:1rem}}
 
 .two-up{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:clamp(20px,3vw,34px);margin-top:clamp(28px,4vw,54px)}
@@ -328,7 +331,7 @@ footer{border-top:1.5px solid var(--line)}
       <div class="feature reveal">
         <div class="feature__text">
           <h2>Built, not mocked up</h2>
-          <p class="body" style="margin:.9rem 0 2.4rem">Three things that exist. You can open the first one right now.</p>
+          <p class="body" style="margin:.9rem 0 2.4rem">Four things that exist. You can open the first two right now.</p>
           <h3>Apex Capital Advisors</h3>
           <p class="body">A real estate finance firm in the United States. Written by hand, no template and no page builder.</p>
           <a class="link" href="https://www.apexcapitaladvisors.net/" target="_blank" rel="noopener">
@@ -340,6 +343,20 @@ footer{border-top:1.5px solid var(--line)}
           <div class="shot__view">
             <img src="assets/apex-desktop.jpg" alt="The Apex Capital Advisors website, scrolling from the top of the page to the bottom" width="1440" height="4585" loading="lazy">
           </div>
+        </figure>
+      </div>
+
+      <div class="feature feature--flip reveal">
+        <div class="feature__text">
+          <h3>A PC build you can take apart</h3>
+          <p class="body">A viewer asked for a $1,100 white PC. Every part was modelled in 3D from the maker's photos and priced, then turned into a page where the build spins and comes apart as you scroll.</p>
+          <a class="link" href="https://aayan-cloud.github.io/techhoman-builds/white-screen-pc/" target="_blank" rel="noopener">
+            Open the 3D build
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+          </a>
+        </div>
+        <figure class="shot">
+          <video src="assets/pc3d-clip.mp4" poster="assets/pc3d-poster.jpg" width="1280" height="720" autoplay muted loop playsinline preload="metadata" aria-label="The 3D PC build page: the build spins, then separates into its parts as the page scrolls"></video>
         </figure>
       </div>
 
