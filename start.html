@@ -106,9 +106,14 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
 footer{border-top:1px solid var(--line);margin-top:clamp(48px,7vw,90px)}
 .foot{display:flex;justify-content:space-between;gap:1rem;padding-block:1.6rem;color:var(--muted);font-size:.93rem}
+/* 90% off banner and struck-through old prices */
+.deal{background:var(--accent);color:#fff;text-align:center;font-weight:800;letter-spacing:.06em;padding:.55rem 1rem;font-size:.95rem}
+s{color:var(--muted);font-weight:500;text-decoration-thickness:2px;margin-right:.3em}
+.svc__price s{font-size:.72em}
 </style>
 </head>
 <body>
+<div class="deal">90% OFF EVERY SERVICE</div>
 
 <header class="nav">
   <div class="wrap nav__in">
@@ -149,11 +154,11 @@ footer{border-top:1px solid var(--line);margin-top:clamp(48px,7vw,90px)}
           <div class="field">
             <label for="want">What you want</label>
             <select id="want" name="want">
-              <option value="leads">A lead engine - $500 setup, then $299 a month</option>
-              <option value="website">A website - $1,000 one-off</option>
+              <option value="leads">A lead engine - $50 setup, then $29.90 a month (90% off)</option>
+              <option value="website">A website - $100 one-off (90% off)</option>
               <option value="both">Both</option>
-              <option value="automation">An automation or an AI agent - from $1,500, quoted per job</option>
-              <option value="3d">A 3D product site - $4,000 one-off</option>
+              <option value="automation">An automation or an AI agent - from $150, quoted per job (90% off)</option>
+              <option value="3d">A 3D product site - $400 one-off (90% off)</option>
               <option value="unsure">Not sure yet</option>
             </select>
           </div>
@@ -214,10 +219,10 @@ footer{border-top:1px solid var(--line);margin-top:clamp(48px,7vw,90px)}
 
       <span class="label">Prices</span>
       <div style="margin-top:.8rem">
-        <div class="price"><b>Lead engine</b><span>$500 setup, then $299 a month</span></div>
-        <div class="price"><b>Website</b><span>$1,000 one-off</span></div>
-        <div class="price"><b>Automation or an AI agent</b><span>from $1,500, quoted per job</span></div>
-        <div class="price"><b>3D product site</b><span>$4,000 one-off</span></div>
+        <div class="price"><b>Lead engine</b><span><s>$500</s>$50 setup, then <s>$299</s>$29.90 a month</span></div>
+        <div class="price"><b>Website</b><span><s>$1,000</s>$100 one-off</span></div>
+        <div class="price"><b>Automation or an AI agent</b><span>from <s>$1,500</s>$150, quoted per job</span></div>
+        <div class="price"><b>3D product site</b><span><s>$4,000</s>$400 one-off</span></div>
       </div>
     </aside>
 
