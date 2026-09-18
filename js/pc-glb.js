@@ -19,12 +19,12 @@ import { OrbitControls } from 'three/controls/OrbitControls.js';
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.75));
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color('#f4f2ee');
+  scene.background = new THREE.Color('#0b0c0e');     // the renders are shot on a dark studio floor
   const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = false;
@@ -41,7 +41,7 @@ import { OrbitControls } from 'three/controls/OrbitControls.js';
   };
   home();
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x787568, 1.3));
+  scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x0a0b0d, 0.35));
   function light(pos, intensity, size) {
     const l = new THREE.DirectionalLight(0xffffff, intensity);
     l.position.set(...pos);
@@ -51,12 +51,12 @@ import { OrbitControls } from 'three/controls/OrbitControls.js';
     l.shadow.normalBias = 0.035;
     scene.add(l);
   }
-  light([-3, 8, 5], 2, 9);
-  light([5, 6, -3], 1.6, 9);
+  light([-3, 8, 5], 1.5, 9);
+  light([5, 6, -3], 1.0, 9);
 
   const ground = new THREE.Mesh(
     new THREE.PlaneGeometry(200, 200),
-    new THREE.MeshStandardMaterial({ color: 0xece9e3, roughness: 0.86 })
+    new THREE.ShadowMaterial({ opacity: 0.45 })      // catches the shadow only, so the dark backdrop stays dark
   );
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.025;
@@ -74,11 +74,24 @@ import { OrbitControls } from 'three/controls/OrbitControls.js';
   loader.load('./assets/build.glb', gltf => {
     const model = gltf.scene;
     scene.add(model);
+    // the RGB parts carry their hue as vertex colour; unlit basic material = the glow of the renders
+    const GLOW = new Set(['rgb_x', 'rgb_y', 'rgb_z', 'rgb_ring', 'glow_blade', 'cool_digits', 'bar_rgb', 'lcd_grad', 'screen_txt', 'screen_cyan']);
     model.traverse(obj => {
-      if (obj.isMesh) {
-        obj.castShadow = true;
-        obj.receiveShadow = true;
-      }
+      if (!obj.isMesh) return;
+      obj.castShadow = true;
+      obj.receiveShadow = true;
+      const wasArray = Array.isArray(obj.material);        // a single-material mesh must stay single: an
+      const mats = wasArray ? obj.material : [obj.material];  // array with no geometry groups draws nothing
+      const next = mats.map(m => {
+        if (!GLOW.has(m.name)) return m;
+        const lit = new THREE.MeshBasicMaterial({ name: m.name, vertexColors: true, toneMapped: false });
+        if (m.name === 'lcd_grad' || m.name === 'screen_txt' || m.name === 'screen_cyan') {
+          lit.vertexColors = false;
+          lit.color.copy(m.emissive && m.emissive.getHex() ? m.emissive : m.color);
+        }
+        return lit;
+      });
+      obj.material = wasArray ? next : next[0];
     });
     mixer = new THREE.AnimationMixer(model);
     gltf.animations.forEach(clip => {
