@@ -63,31 +63,15 @@ import { OrbitControls } from 'three/controls/OrbitControls.js';
   ground.receiveShadow = true;
   scene.add(ground);
 
-  // Load GLB
-  const parts = [];
-  const offsets = {
-    GPU: [-0.5, 0.1, 2],
-    Cooler: [-0.45, 0.35, 2.5],
-    RAM: [1, 0.3, 1.1],
-    RAM_B2: [1, -0.3, 1.1],
-    Motherboard: [0, 0, 0.6],
-    FanMontech_1: [0, -0.2, 2.5],
-    FanMontech_2: [0, -0.2, 2.5],
-    FanMontech_3: [0, -0.2, 2.5],
-    FanThermalright_1: [0, -0.2, 2.5],
-    FanThermalright_2: [0, -0.2, 2.5],
-    Case: [0, 0, 0],
-    PSU: [3, 0, 0],
-    CPU: [-0.5, 0, 1.4],
-    SSD: [1, -0.5, 1.4],
-  };
+  // Load GLB: the explode is baked as animation, frame 1 assembled to frame 61 apart
+  let mixer = null, clipLength = 1;
   let ready = false;
 
   const loader = new GLTFLoader();
-  const draco = new DRACOLoader();      // the model is draco-compressed: 24 MB -> 2.9 MB
+  const draco = new DRACOLoader();      // draco-compressed export from the render scene
   draco.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.149.0/examples/jsm/libs/draco/');
   loader.setDRACOLoader(draco);
-  loader.load('./assets/assembled-pc-draco.glb', gltf => {
+  loader.load('./assets/build.glb', gltf => {
     const model = gltf.scene;
     scene.add(model);
     model.traverse(obj => {
@@ -95,10 +79,16 @@ import { OrbitControls } from 'three/controls/OrbitControls.js';
         obj.castShadow = true;
         obj.receiveShadow = true;
       }
-      if (offsets[obj.name]) {
-        parts.push({ obj, base: obj.position.clone(), delta: new THREE.Vector3(...offsets[obj.name]) });
-      }
     });
+    mixer = new THREE.AnimationMixer(model);
+    gltf.animations.forEach(clip => {
+      clipLength = Math.max(clipLength, clip.duration);
+      const action = mixer.clipAction(clip);
+      action.setLoop(THREE.LoopOnce, 1);     // without this the last frame wraps back to assembled
+      action.clampWhenFinished = true;
+      action.play();
+    });
+    mixer.setTime(0);
     const box = new THREE.Box3().setFromObject(model);
     const size = box.getSize(new THREE.Vector3());
     homeTarget = box.getCenter(new THREE.Vector3());
@@ -109,11 +99,11 @@ import { OrbitControls } from 'three/controls/OrbitControls.js';
     ground.position.y = box.min.y - 0.002 * size.y;
     home();
     ready = true;
-    label.textContent = 'LOCAL GLB LOADED / ' + parts.length + ' ASSEMBLIES';
-    resize();          // the model arrives after the first draw, so draw again
+    label.textContent = 'THE BUILD / ' + gltf.animations.length + ' MOVING PARTS';
+    resize();
     update();
   }, undefined, err => {
-    label.textContent = 'Model load failed — ' + err.message;
+    label.textContent = 'Model load failed - ' + err.message;
     console.error(err);
   });
 
@@ -161,7 +151,7 @@ import { OrbitControls } from 'three/controls/OrbitControls.js';
   function update() {
     const v = THREE.MathUtils.clamp(Math.round(Number(slider.value)), 0, 119);
     wheelPosition = v;
-    parts.forEach(p => p.obj.position.copy(p.base).addScaledVector(p.delta, v / 119));
+    if (mixer) mixer.setTime(Math.min((v / 119) * clipLength, clipLength - 0.001));
     label.textContent = v < 72 ? 'Rotation' : 'Exploded view';
     phaseEl.textContent = v < 72 ? '01' : '02';
     progressEl.textContent = String(v + 1).padStart(3, '0') + ' / 120';
