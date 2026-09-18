@@ -10,3 +10,13 @@
 /* the GLB canvas fills its box; without a height the renderer size and the CSS size disagree */
 #pc-glb-wrapper .pc-media{aspect-ratio:4/3}
 #pc-glb{width:100%;height:100%;display:block}
+
+/* the wrapper's class is pc-glb, so styles.css's .pc-glb-wrapper rules never applied and the
+   component list dropped below the model. Same three columns as the frames viewer. */
+#pc-glb-wrapper{display:grid;grid-template-columns:1fr minmax(0,2.9fr) .8fr;align-items:center;gap:35px;max-width:1450px;width:100%;margin:auto}
+#pc-glb-wrapper .pc-components{display:flex;flex-direction:column;gap:14px;color:var(--muted);font-size:11px;padding-left:10px;margin:0}
+#pc-glb-wrapper .pc-components span{background:none;border:0;border-radius:0;padding:0;font-family:inherit;font-size:11px}
+#pc-glb-wrapper .pc-components .mono{font-size:8px;margin-bottom:14px}
+#pc-glb-wrapper .pc-components>span:not(:first-child){border-top:1px solid var(--line);padding-top:9px}
+@media(max-width:1100px){#pc-glb-wrapper{grid-template-columns:1fr 3.3fr;gap:25px}#pc-glb-wrapper .pc-components{display:none}}
+@media(max-width:760px){#pc-glb-wrapper{display:flex;flex-direction:column;gap:16px}}
