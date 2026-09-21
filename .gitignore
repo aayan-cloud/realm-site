@@ -3,3 +3,6 @@
 README.md
 design-prompt.md
 shot-*.png
+
+# local work folders, never publish
+brag-output-*/

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/environments/RoomEnvironment.js';
 
 (() => {
   'use strict';
@@ -25,23 +26,28 @@ import { OrbitControls } from 'three/controls/OrbitControls.js';
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#0b0c0e');     // the renders are shot on a dark studio floor
-  const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+  // the render camera: 50 mm lens on a 36 mm sensor, square frame -> 39.6 degrees
+  const camera = new THREE.PerspectiveCamera(39.6, 1, 0.01, 20);
+  // scene.py cameras, converted from Blender (x, y, z) to glTF (x, z, -y)
+  const HERO = { pos: new THREE.Vector3(0.8664, 0.4337, 0.6769), target: new THREE.Vector3(0, 0.22, 0) };      // orbit(38, 11, 1.12)
+  const EXPL = { pos: new THREE.Vector3(1.0835, 0.7106, 1.4884), target: new THREE.Vector3(0.03, 0.22, 0.14) }; // orbit(52, 16, 1.78)
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = false;
   controls.enableZoom = false;
   controls.minPolarAngle = 0.15;
   controls.maxPolarAngle = Math.PI * 0.53;
 
-  // filled in once the model is measured, so the framing never depends on the export's scale
-  let homePos = new THREE.Vector3(8, 5.8, 10.5), homeTarget = new THREE.Vector3(0, 2.5, 0);
-  const home = () => {
-    camera.position.copy(homePos);
-    controls.target.copy(homeTarget);
+  const aim = cam => {
+    camera.position.copy(cam.pos);
+    controls.target.copy(cam.target);
     controls.update();
   };
+  const home = () => aim(HERO);
+  let modelRoot = null;
   home();
 
-  scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x0a0b0d, 0.35));
+  scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x0a0b0d, 0.2));
   function light(pos, intensity, size) {
     const l = new THREE.DirectionalLight(0xffffff, intensity);
     l.position.set(...pos);
@@ -51,12 +57,22 @@ import { OrbitControls } from 'three/controls/OrbitControls.js';
     l.shadow.normalBias = 0.035;
     scene.add(l);
   }
-  light([-3, 8, 5], 1.5, 9);
-  light([5, 6, -3], 1.0, 9);
+  light([-3, 8, 5], 0.9, 3);
+  light([5, 6, -3], 0.5, 3);
 
+  const grid = document.createElement('canvas');
+  grid.width = grid.height = 128;
+  const g2 = grid.getContext('2d');
+  g2.fillStyle = '#0a0b0e'; g2.fillRect(0, 0, 128, 128);
+  g2.fillStyle = '#1b1e24'; g2.fillRect(0, 0, 128, 3); g2.fillRect(0, 0, 3, 128);
+  const gridTex = new THREE.CanvasTexture(grid);
+  gridTex.wrapS = gridTex.wrapT = THREE.RepeatWrapping;
+  gridTex.repeat.set(8 / 0.12, 8 / 0.12);
+  gridTex.encoding = THREE.sRGBEncoding;
+  gridTex.anisotropy = 8;
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(200, 200),
-    new THREE.ShadowMaterial({ opacity: 0.45 })      // catches the shadow only, so the dark backdrop stays dark
+    new THREE.PlaneGeometry(8, 8),
+    new THREE.MeshStandardMaterial({ map: gridTex, roughness: 0.4, metalness: 0, envMapIntensity: 0.25 })
   );
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.025;
@@ -75,6 +91,7 @@ import { OrbitControls } from 'three/controls/OrbitControls.js';
     const model = gltf.scene;
     scene.add(model);
     // the RGB parts carry their hue as vertex colour; unlit basic material = the glow of the renders
+    const PASTEL = new Set(['rgb_x', 'rgb_y', 'rgb_z', 'rgb_ring', 'glow_blade']);
     const GLOW = new Set(['rgb_x', 'rgb_y', 'rgb_z', 'rgb_ring', 'glow_blade', 'cool_digits', 'bar_rgb', 'lcd_grad', 'screen_txt', 'screen_cyan']);
     model.traverse(obj => {
       if (!obj.isMesh) return;
@@ -83,15 +100,45 @@ import { OrbitControls } from 'three/controls/OrbitControls.js';
       const wasArray = Array.isArray(obj.material);        // a single-material mesh must stay single: an
       const mats = wasArray ? obj.material : [obj.material];  // array with no geometry groups draws nothing
       const next = mats.map(m => {
-        if (!GLOW.has(m.name)) return m;
+        if (!GLOW.has(m.name)) {          // only the RGB parts use the baked colour layer
+          m.vertexColors = false;
+          return m;
+        }
         const lit = new THREE.MeshBasicMaterial({ name: m.name, vertexColors: true, toneMapped: false });
-        if (m.name === 'lcd_grad' || m.name === 'screen_txt' || m.name === 'screen_cyan') {
+        if (PASTEL.has(m.name)) {       // the renders' AgX look washes bright RGB toward white
+          lit.onBeforeCompile = sh => {
+            sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>',
+              '#include <color_fragment>\n  diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0), 0.38);');
+          };
+        }
+        if (m.name === 'screen_txt' || m.name === 'screen_cyan') {
           lit.vertexColors = false;
           lit.color.copy(m.emissive && m.emissive.getHex() ? m.emissive : m.color);
         }
         return lit;
       });
       obj.material = wasArray ? next : next[0];
+    });
+    // scene.py perforated(): hole every `pitch` on two object axes (Blender XZ -> glTF xy, XY -> xz)
+    const PERF = { perf_white_xz: [0.004, 'xy', 0.33], perf_white_xy: [0.005, 'xz', 0.33], perf_grille_xz: [0.0045, 'xy', 0.36] };
+    model.traverse(obj => {
+      if (!obj.isMesh) return;
+      (Array.isArray(obj.material) ? obj.material : [obj.material]).forEach(m => {
+        const p = PERF[m.name];
+        if (!p) return;
+        m.side = THREE.DoubleSide;
+        m.onBeforeCompile = sh => {
+          sh.vertexShader = sh.vertexShader
+            .replace('#include <common>', '#include <common>\nvarying vec3 vObj;')
+            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvObj = position;');
+          sh.fragmentShader = sh.fragmentShader
+            .replace('#include <common>', '#include <common>\nvarying vec3 vObj;')
+            .replace('#include <clipping_planes_fragment>', `#include <clipping_planes_fragment>
+              vec2 cell = fract(vObj.${p[1]} / ${p[0].toFixed(5)}) - 0.5;
+              if (dot(cell, cell) < ${(p[2] * p[2]).toFixed(4)}) discard;`);
+        };
+        m.needsUpdate = true;
+      });
     });
     mixer = new THREE.AnimationMixer(model);
     gltf.animations.forEach(clip => {
@@ -102,14 +149,9 @@ import { OrbitControls } from 'three/controls/OrbitControls.js';
       action.play();
     });
     mixer.setTime(0);
+    modelRoot = model;
     const box = new THREE.Box3().setFromObject(model);
-    const size = box.getSize(new THREE.Vector3());
-    homeTarget = box.getCenter(new THREE.Vector3());
-    const dist = (size.length() / 2) / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * 0.95;
-    homePos = homeTarget.clone().add(new THREE.Vector3(0.62, 0.42, 0.82).normalize().multiplyScalar(dist));
-    camera.near = dist / 200;
-    camera.far = dist * 12;
-    ground.position.y = box.min.y - 0.002 * size.y;
+    ground.position.y = box.min.y - 0.001;
     home();
     ready = true;
     label.textContent = 'THE BUILD / ' + gltf.animations.length + ' MOVING PARTS';
@@ -164,7 +206,11 @@ import { OrbitControls } from 'three/controls/OrbitControls.js';
   function update() {
     const v = THREE.MathUtils.clamp(Math.round(Number(slider.value)), 0, 119);
     wheelPosition = v;
-    if (mixer) mixer.setTime(Math.min((v / 119) * clipLength, clipLength - 0.001));
+    // same split as the render frames: 72 turntable steps, then 48 explode steps from the explode camera
+    const turning = v < 72;
+    if (modelRoot) modelRoot.rotation.y = turning ? (v / 72) * Math.PI * 2 : 0;
+    if (mixer) mixer.setTime(Math.min(turning ? 1 / 30 : (1 + 60 * (v - 72) / 47) / 30, clipLength - 0.0005));
+    aim(turning ? HERO : EXPL);
     label.textContent = v < 72 ? 'Rotation' : 'Exploded view';
     phaseEl.textContent = v < 72 ? '01' : '02';
     progressEl.textContent = String(v + 1).padStart(3, '0') + ' / 120';
