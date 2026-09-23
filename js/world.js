@@ -263,17 +263,13 @@
     feet(g, 2.2, 1.35);
     box(g, 5.5, 0.36, 3.9, M.ceramic, 0, 0.31, 0, 0.12);
     box(g, 5.38, 0.18, 3.76, M.white, 0, 0.58, 0, 0.08);
-    // Architectural R: load-bearing spine, squared bowl, true counter,
-    // and a diagonal leg descending to the same foundation.
-    var s = new T.Shape();
-    s.moveTo(-1.6, 0); s.lineTo(-1.6, 3.8); s.lineTo(0.45, 3.8);
-    s.quadraticCurveTo(1.55, 3.8, 1.55, 2.68); s.lineTo(1.55, 2.38);
-    s.quadraticCurveTo(1.55, 1.7, 0.7, 1.53); s.lineTo(1.85, 0);
-    s.lineTo(0.65, 0); s.lineTo(-0.43, 1.48); s.lineTo(-0.62, 1.48);
-    s.lineTo(-0.62, 0); s.closePath();
-    var h = new T.Path(); h.moveTo(-0.62, 2.22); h.lineTo(0.37, 2.22);
-    h.quadraticCurveTo(0.63, 2.22, 0.63, 2.56); h.lineTo(0.63, 2.77);
-    h.quadraticCurveTo(0.63, 3.02, 0.37, 3.02); h.lineTo(-0.62, 3.02); h.closePath(); s.holes.push(h);
+    // The Realm Systems mark (2026-09-23 logo): the letter body, traced from the logo,
+    // and the separate wedge under the bowl. Extrude and ShapeGeometry both take the array.
+    var s = [];
+    var o0 = new T.Shape(); o0.moveTo(-0.716, 3.500); o0.lineTo(-2.082, 3.495); o0.lineTo(-2.088, 3.484); o0.lineTo(-2.066, 3.457); o0.lineTo(-1.364, 2.684); o0.lineTo(0.581, 2.690); o0.lineTo(0.694, 2.668); o0.lineTo(0.791, 2.614); o0.lineTo(0.851, 2.544); o0.lineTo(0.894, 2.447); o0.lineTo(0.894, 2.285); o0.lineTo(0.861, 2.209); o0.lineTo(0.818, 2.150); o0.lineTo(0.705, 2.074); o0.lineTo(0.575, 2.052); o0.lineTo(-0.629, 2.052); o0.lineTo(-0.667, 2.047); o0.lineTo(-0.667, 2.031); o0.lineTo(-0.122, 1.421); o0.lineTo(1.094, 0.005); o0.lineTo(2.088, 0.000); o0.lineTo(2.088, 0.022); o0.lineTo(1.866, 0.265); o0.lineTo(1.585, 0.605); o0.lineTo(0.948, 1.318); o0.lineTo(1.115, 1.383); o0.lineTo(1.207, 1.437); o0.lineTo(1.407, 1.610); o0.lineTo(1.547, 1.804); o0.lineTo(1.639, 2.020); o0.lineTo(1.672, 2.160); o0.lineTo(1.688, 2.317); o0.lineTo(1.682, 2.479); o0.lineTo(1.661, 2.614); o0.lineTo(1.596, 2.819); o0.lineTo(1.520, 2.965); o0.lineTo(1.423, 3.100); o0.lineTo(1.256, 3.262); o0.lineTo(1.088, 3.370); o0.lineTo(0.943, 3.435); o0.lineTo(0.732, 3.489); o0.lineTo(0.656, 3.500); o0.closePath();
+    s.push(o0);
+    var o1 = new T.Shape(); o1.moveTo(-1.466, 2.252); o1.lineTo(-1.466, 0.000); o1.lineTo(-1.456, 0.000); o1.lineTo(-1.191, 0.205); o1.lineTo(-0.824, 0.519); o1.lineTo(-0.791, 0.562); o1.lineTo(-0.316, 0.999); o1.lineTo(-0.240, 1.075); o1.lineTo(-0.240, 1.091); o1.lineTo(-0.926, 1.880); o1.lineTo(-1.218, 2.096); o1.lineTo(-1.423, 2.236); o1.closePath();
+    s.push(o1);
     var geo = new T.ExtrudeGeometry(s, { depth: 0.84, bevelEnabled: true, bevelSize: 0.055, bevelThickness: 0.055, bevelSegments: 4, curveSegments: 24 });
     mesh(g, geo, [M.white, M.edge], 0, 0.72, -0.44);
     // Orange recessed architectural reveal follows the R's front face.
