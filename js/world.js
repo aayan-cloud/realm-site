@@ -328,6 +328,15 @@
         box(g, 0.2, 0.05, 0.07, M.orange, side * 1.03, 0.66, -0.55 + pin * 0.27);
       });
     }
+    if (key === 'receptionist') {
+      // A phone face-up on the plate: an incoming-call dot, two message lines, an answer key.
+      box(g, 1.1, 0.12, 2.2, M.ink, 0, 0.3, 0, 0.08);
+      box(g, 0.98, 0.03, 2.05, M.screen, 0, 0.375, 0, 0.01);
+      ball(g, 0.11, M.orange, 0, 0.44, -0.62);
+      box(g, 0.6, 0.035, 0.09, M.metal, 0, 0.4, -0.18, 0.01);
+      box(g, 0.44, 0.035, 0.09, M.metal, -0.08, 0.4, 0.04, 0.01);
+      box(g, 0.7, 0.14, 0.34, M.orange, 0, 0.45, 0.72, 0.05);
+    }
     if (key === '3d') {
       cylinder(g, 0.94, 0.12, M.metal, 0, 0.32, 0);
       var product = group(g, 0, 0.41, 0);
