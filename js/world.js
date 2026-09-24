@@ -364,6 +364,18 @@
   var hero = document.getElementById('hero-stage'); if (hero) buildHero(hero);
   var closing = document.getElementById('close-stage'); if (closing) buildClosing(closing);
   document.querySelectorAll('.svc__obj[data-obj]').forEach(buildService);
+  // The hero and the closing mark draw into their own canvas inside their box, like the
+  // services, so they scroll with the page. They used to be painted onto one fixed canvas on
+  // every scroll event, and iPhones move the page before that event fires, so the models
+  // lagged a frame behind and looked like they were vibrating.
+  stages.forEach(function (st) {
+    var r; try { r = new T.WebGLRenderer({ antialias: true, alpha: true }); } catch (_) { return; }
+    setupRenderer(r); st.renderer = r;
+    r.domElement.setAttribute('aria-hidden', 'true');
+    r.domElement.style.cssText = 'display:block;position:absolute;inset:0;width:100%;height:100%;z-index:1;';
+    st.el.insertBefore(r.domElement, st.el.firstChild);
+  });
+  renderer.dispose(); canvas.style.display = 'none';
   var all = stages.concat(services), v = new T.Vector3();
   // Fit the model's fixed local bounds in camera coordinates. DOM position
   // NEVER changes world position or scale, preventing scroll/viewport drift.
@@ -392,8 +404,7 @@
     });
   }
   function sizeAll() {
-    renderer.setSize(innerWidth, innerHeight, false);
-    services.forEach(function (st) { if (!st.renderer) return; var r = st.el.getBoundingClientRect(); st.renderer.setSize(Math.max(1,r.width),Math.max(1,r.height),false); });
+    all.forEach(function (st) { if (!st.renderer) return; var r = st.el.getBoundingClientRect(); st.renderer.setSize(Math.max(1,r.width),Math.max(1,r.height),false); });
     request();
   }
   function visible(r) { return r.width > 1 && r.height > 1 && r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth; }
@@ -402,7 +413,6 @@
     raf = 0; if (document.hidden) return;
     var dt = last ? Math.min((now-last)/1000,0.04) : 0; last = now;
     var active = false; frames++;
-    renderer.setScissorTest(false); renderer.clear(true,true,true);
     all.forEach(function (st) {
       var r = st.el.getBoundingClientRect(); st.visible = visible(r); st.rect = r;
       if (!st.visible) return;
@@ -418,18 +428,8 @@
         packets.forEach(function (p) { p.mesh.position.copy(p.curve.getPointAt((p.phase + (reduced ? 0 : st.time * 0.18)) % 1)); });
         labels(st,r);
       }
-      if (st.kind === 'service') {
-        if (!st.renderer) return;
-        st.renderer.clear(); st.renderer.render(st.scene,st.camera);
-      } else {
-        // Viewport remains stage-local even when partially scrolled out.
-        // Scissor is clipped to the viewport so no pixels can hit a headline.
-        var left = Math.max(0,r.left), right = Math.min(innerWidth,r.right);
-        var top = Math.max(0,r.top), bottom = Math.min(innerHeight,r.bottom);
-        renderer.setViewport(r.left,innerHeight-r.bottom,r.width,r.height);
-        renderer.setScissor(left,innerHeight-bottom,right-left,bottom-top);
-        renderer.setScissorTest(true); renderer.clearDepth(); renderer.render(st.scene,st.camera);
-      }
+      if (!st.renderer) return;
+      st.renderer.clear(); st.renderer.render(st.scene,st.camera);
       st.draws++;
     });
     elapsed += dt;
