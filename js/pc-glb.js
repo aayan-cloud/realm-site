@@ -172,13 +172,13 @@ import { RoomEnvironment } from 'three/environments/RoomEnvironment.js';
     const turn = ease(smooth(0, 0.42, p));
     const open = smooth(0.42, 0.9, p);
     const cam = ease(smooth(0.34, 0.66, p));
-    if (model) model.rotation.y = turn * Math.PI * 2 + (coarse || reduced ? 0 : Math.sin(t * 0.45) * 0.03) + px * 0.1;
+    if (model) model.rotation.y = turn * Math.PI * 2 + (coarse || reduced ? 0 : Math.sin(t * 0.45) * 0.02) + px * 0.03;
     if (mixer) mixer.setTime(clamp((1 + 60 * open) / 30, 1 / 30, clipLength - 0.0005));
     camTarget.lerpVectors(HERO.target, EXPL.target, cam);
     camPos.lerpVectors(HERO.pos, EXPL.pos, cam);
     off.subVectors(camPos, camTarget).multiplyScalar(fit);   // back off on tall screens so the build stays in frame
-    off.applyAxisAngle(UP, -px * 0.08);                       // a little tilt from the mouse
-    off.y += py * 0.05 * off.length();
+    off.applyAxisAngle(UP, -px * 0.025);                      // a hint of tilt from the mouse, no more
+    off.y += py * 0.015 * off.length();
     camera.position.addVectors(camTarget, off);
     camera.lookAt(camTarget);
     const label = p < 0.4 ? 'Turning' : p < 0.9 ? 'Coming apart' : 'Every part, modelled';
