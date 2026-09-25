@@ -73,3 +73,9 @@
 .foot__links a:hover{color:var(--ink);border-bottom-color:var(--ink)}
 .svc__note{font-size:15px;color:var(--muted);max-width:44ch;margin:-50px 0 40px}
 @media(max-width:760px){.svc__note{margin:-30px 0 26px;font-size:13px}.foot__links{width:100%}}
+.close__cta{margin-top:44px}
+.close__cta .btn{font-size:18px;min-height:66px;padding:20px 30px;gap:48px}
+.close__contact{margin-top:22px;font-size:14px;color:var(--muted);max-width:44ch}
+.close__contact a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--line)}
+.close__contact a:hover{border-bottom-color:var(--accent)}
+@media(max-width:760px){.close__cta .btn{font-size:16px;min-height:58px;padding:16px 22px}}

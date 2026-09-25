@@ -26,7 +26,7 @@ const CLOSE = pick(/<section class="close"[\s\S]*?<\/section>/);
 const WORK = pick(/<section class="work"[\s\S]*?<\/section>/);
 const article = (cls) => pick(new RegExp(`<article class="${cls}"[\\s\\S]*?<\\/article>`));
 
-const nav = (want) => `<header class="nav" id="nav"><div class="wrap nav__in"><a class="brand" href="index.html"><img src="assets/realm-mark.png" alt="Realm Systems" width="36" height="36"><span>Realm<br>Systems</span></a><nav aria-label="Main navigation"><a href="work.html">Selected work <sup>04</sup></a><a href="index.html#services">Services</a><a href="index.html#process">Process</a></nav><a class="nav__cta" href="start.html${want ? '?want=' + want : ''}">Start a job <span aria-hidden="true">↗︎</span></a></div></header>`;
+const nav = (want) => `<header class="nav" id="nav"><div class="wrap nav__in"><a class="brand" href="index.html"><img src="assets/realm-mark.png" alt="Realm Systems" width="36" height="36"><span>Realm<br>Systems</span></a><nav aria-label="Main navigation"><a href="work.html">Selected work</a><a href="index.html#services">Services</a><a href="index.html#process">Process</a></nav><a class="nav__cta" href="start.html${want ? '?want=' + want : ''}">Start a job <span aria-hidden="true">↗︎</span></a></div></header>`;
 
 const shell = ({ title, description, body, want, canonical }) => `<!doctype html>
 <html lang="en">
