@@ -35,7 +35,8 @@ const shell = ({ title, description, body, want, canonical }) => `<!doctype html
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(description)}"><meta property="og:image" content="assets/logo.png">
-<link rel="canonical" href="https://realmsystems.pages.dev/${canonical}">
+<link rel="canonical" href="https://realmsystems.net/${canonical}">
+<script>if(/.pages.dev$/.test(location.hostname))location.replace("https://realmsystems.net"+location.pathname+location.search+location.hash);</script>
 ${FONTS}
 <link rel="stylesheet" href="${CSS}">
 </head>
