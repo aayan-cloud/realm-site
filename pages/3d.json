@@ -1,0 +1,102 @@
+{
+  "slug": "3d",
+  "want": "3d",
+  "number": "05",
+  "service_name": "3D product site",
+  "page_title": "3D product site - Realm Systems",
+  "meta_description": "Your product turns and comes apart as you scroll. Modelled in 3D from your photos, rendered in Blender, yours to keep. $4,000 one-off, pay on delivery.",
+  "hero": {
+    "eyebrow_right": "$4,000 one-off",
+    "headline_line1": "A photo and a price is not the product.",
+    "headline_line2": "Let them take it apart.",
+    "lead": "We model your product in 3D from your photos or the maker's spec and render it in Blender. Then we build a page where it turns and comes apart as you scroll. Every part named and priced beside it."
+  },
+  "problem": {
+    "headline": "A photo does not show what is inside.",
+    "points": [
+      {
+        "title": "One side, one angle",
+        "text": "A photo shows the outside from wherever the camera stood. The customer wants to know what is inside and what it is made of, and has to take your word for it."
+      },
+      {
+        "title": "A spec sheet is a wall of numbers",
+        "text": "People ask what is in it. A table of model numbers does not answer them, so you end up answering the same questions one message at a time."
+      },
+      {
+        "title": "White background, like everyone else",
+        "text": "Product shots on white look like every other listing. Nothing on the page shows that you built this, or why it costs what it costs."
+      }
+    ]
+  },
+  "get": {
+    "headline": "What you get for $4,000.",
+    "items": [
+      {
+        "title": "A 3D model of every part",
+        "text": "Modelled from your product photos or the maker's spec, the way the white PC for Tech Homan was modelled from the maker's photos."
+      },
+      {
+        "title": "Renders from Blender",
+        "text": "A full turn and a full take-apart, rendered frame by frame. The exhibit below is 72 frames of a turn and 48 of it coming apart."
+      },
+      {
+        "title": "A page that moves as you scroll",
+        "text": "Scroll down and the product turns. Keep going and it comes apart."
+      },
+      {
+        "title": "A component inspector",
+        "text": "Each part named and priced beside the model, with the date the prices were checked. Not live prices."
+      },
+      {
+        "title": "The model files and the page",
+        "text": "Both are yours on delivery."
+      },
+      {
+        "title": "A fixed price and date in writing",
+        "text": "Quoted before we open Blender. You see it working with your real product, not a mockup, before you pay."
+      }
+    ]
+  },
+  "proof": {
+    "headline": "Built, not mocked up. Scroll it.",
+    "caption": "The live white PC page built for Tech Homan. Every part modelled from the maker's photos and rendered in Blender, 72 frames of a full turn and 48 of it coming apart. The inspector shows real part prices, $1,533.49 in total, PCPartPicker US pricing checked 15 Sep 2026, not live. Scroll inside the frame and turn it."
+  },
+  "price": {
+    "amount": "$4,000",
+    "terms": "One-off. Quoted in writing before any work starts, paid on delivery.",
+    "included": [
+      "3D model of every part, from your photos or the maker's spec",
+      "Blender renders of a full turn and a full take-apart",
+      "The scroll page with the component inspector",
+      "The model files and the page, yours to keep"
+    ],
+    "extras": "A full website around it is a separate job, $1,000 one-off for one page. A second product is quoted separately. So are changes to parts and prices after delivery, once we know what they are.",
+    "note": "Pay on delivery. Nothing is due until you have seen it turning with your own product."
+  },
+  "faq": [
+    {
+      "q": "Do you need the product in front of you?",
+      "a": "No. We model from your product photos or the maker's spec. The white PC built for Tech Homan was modelled from the maker's photos."
+    },
+    {
+      "q": "What will it not do?",
+      "a": "It is not a shop and not a configurator. Nothing goes in a cart, nothing is priced live, and the visitor cannot swap parts. The prices in the inspector are shown with the date they were checked. If you need any of that, say so when you message us and we will tell you whether we can do it and what it costs."
+    },
+    {
+      "q": "How long does it take?",
+      "a": "We do not put a number here because it depends on how many parts the product has. The delivery date goes in the quote, in writing, before any work starts."
+    },
+    {
+      "q": "Why $4,000 when a website is $1,000?",
+      "a": "The website is one page, written from scratch and live in a week. This is every part of your product modelled in 3D, rendered frame by frame in Blender, and a page built around those frames."
+    },
+    {
+      "q": "What happens after delivery?",
+      "a": "You pay, and the model files and the page are yours. There is no monthly fee and no retainer. If a part or a price changes later, send us the new one and we quote the update. If you would rather change it yourself, you have the files."
+    }
+  ],
+  "close": {
+    "headline_line1": "Tell us the business and the product.",
+    "headline_line2": "We quote it in writing before we start."
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "slug": "websites",
+  "want": "website",
+  "number": "02",
+  "service_name": "Website",
+  "page_title": "Website - Realm Systems",
+  "meta_description": "A one-page website written from scratch and live in a week. $1,000 one-off, no template, no page builder, no monthly plan. You own the code.",
+  "hero": {
+    "eyebrow_right": "$1,000 one-off",
+    "headline_line1": "They look you up and find nothing.",
+    "headline_line2": "One page, live in a week.",
+    "lead": "A website written from scratch for your business. No template, no page builder, no monthly plan. You own the code."
+  },
+  "problem": {
+    "headline": "What no website costs you.",
+    "points": [
+      {
+        "title": "They check before they call",
+        "text": "Someone finds you on Maps, looks for a website, finds nothing, and rings the next name down."
+      },
+      {
+        "title": "The page builder looked cheap",
+        "text": "You tried one. It looked like every other one."
+      },
+      {
+        "title": "No time to write it",
+        "text": "You know the trade. You do not have an evening spare to write about it, and you should not need one."
+      }
+    ]
+  },
+  "get": {
+    "headline": "What $1,000 gets you.",
+    "items": [
+      {
+        "title": "One page, written from scratch",
+        "text": "Every line is written for your business by hand, not pasted from a template or dragged out of a page builder."
+      },
+      {
+        "title": "Live in a week",
+        "text": "A fixed price and a delivery date in writing before we start, and the page online within the week."
+      },
+      {
+        "title": "Online, with no monthly bill to us",
+        "text": "We put it online on hosting that costs nothing, the same way the Apex site runs. The domain name is the one running cost. It is bought in your name from the domain company, and we tell you its price before you buy it."
+      },
+      {
+        "title": "You own the code",
+        "text": "Pay on delivery and the site is yours, files and all."
+      }
+    ]
+  },
+  "proof": {
+    "headline": "One we built. Scroll it.",
+    "caption": "Apex Capital Advisors, a real estate finance firm in the United States. Written by hand, no template and no page builder. Its enquiry and loan-application forms email the owner, and the owner edits the wording through a small admin panel we built. Those two are quoted on top of the one page. Live at apexcapitaladvisors.net."
+  },
+  "price": {
+    "amount": "$1,000",
+    "terms": "One-off. One page, live in a week. More pages quoted.",
+    "included": [
+      "One page, written from scratch by hand",
+      "Put online, with no monthly bill to us",
+      "The code, yours on delivery"
+    ],
+    "extras": "More pages are quoted per job once we know what they are. If you also want the lead engine, a checked list of leads every month pointed at your city and trade, it is $500 setup, then $299 a month.",
+    "note": "Pay on delivery. You see it working on your real business, not a mockup, before you pay."
+  },
+  "faq": [
+    {
+      "q": "What does one page actually mean?",
+      "a": "One page. Written from scratch and live in a week for $1,000. If you need more pages, tell us what they are and we quote them before any work starts."
+    },
+    {
+      "q": "Will it put me at the top of Google?",
+      "a": "We do not promise rankings, and we would not trust anyone who does. What the page does is give people something to find when they look you up. Finding customers is a separate job. The lead engine finds businesses in your city and trade and drafts a message for each, at $500 setup, then $299 a month."
+    },
+    {
+      "q": "What do I pay every month?",
+      "a": "Nothing to us. The $1,000 is one-off and the hosting costs nothing. The one running cost is the domain name, bought in your name from the domain company, and we tell you its price before you buy it. There is no page builder plan to keep paying."
+    },
+    {
+      "q": "Is it a template or a page builder?",
+      "a": "No. The page is written by hand, no template and no page builder. Apex Capital Advisors, the site on this page, was built the same way."
+    },
+    {
+      "q": "What happens after it goes live?",
+      "a": "You pay on delivery and the site is yours, code and files. If you want changes or more pages later, message us and we quote them before any work starts."
+    }
+  ],
+  "close": {
+    "headline_line1": "Tell us the business and the city.",
+    "headline_line2": "The page is live in a week."
+  }
+}

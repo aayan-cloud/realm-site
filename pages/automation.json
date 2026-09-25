@@ -1,0 +1,101 @@
+{
+  "slug": "automation",
+  "want": "automation",
+  "number": "04",
+  "service_name": "Lead engine, automation or an AI agent",
+  "page_title": "Lead engine, automation or an AI agent - Realm Systems",
+  "meta_description": "A lead engine that finds and checks businesses in your city and drafts a message for each. $500 setup, then $299 a month. Automation from $1,500.",
+  "hero": {
+    "eyebrow_right": "$500 setup, then $299 a month. Automation from $1,500",
+    "headline_line1": "Chasing new work is a second job.",
+    "headline_line2": "We build the system that does it.",
+    "lead": "A lead engine that finds businesses in your city and trade, checks each one and drafts you a personal message to send. Or an automation or an AI agent, built for the job that eats your week and quoted once we know what it is."
+  },
+  "problem": {
+    "headline": "The work is out there. The hours are not.",
+    "points": [
+      {
+        "title": "No time to go looking",
+        "text": "You are busy doing the work. Finding the next customer gets pushed to the evening, and then it does not happen."
+      },
+      {
+        "title": "The list you paid for went nowhere",
+        "text": "Numbers that were dead, businesses that already had what you sell, and no idea what to say to the rest."
+      },
+      {
+        "title": "The same admin every week",
+        "text": "Copying enquiries across, chasing the same quote, sending the same reminder. Hours nobody pays you for."
+      }
+    ]
+  },
+  "get": {
+    "headline": "What we hand over.",
+    "items": [
+      {
+        "title": "A checked list, every month",
+        "text": "Businesses on Google Maps with plenty of reviews and no website, in the city and trade you sell to. Each one checked before it reaches you."
+      },
+      {
+        "title": "A personal message for every lead",
+        "text": "Written about that business, drafted for you to read and send yourself. We never send on your behalf."
+      },
+      {
+        "title": "Some of it by hand",
+        "text": "Some steps run on their own and some we run by hand. Nothing reaches you unchecked."
+      },
+      {
+        "title": "Workflow files you own",
+        "text": "Built for the one job you name. Pay on delivery and the files are yours."
+      },
+      {
+        "title": "A price and a date in writing",
+        "text": "A fixed price and a delivery date before any work starts, then pay on delivery."
+      },
+      {
+        "title": "Seen working on your real business",
+        "text": "You watch it run on your real business before you pay, not on a mockup."
+      }
+    ]
+  },
+  "proof": {
+    "headline": "Real runs, recorded.",
+    "caption": "Two engines, both recorded, neither a live feed. The lead system above searches Google Maps. The ad engine reads Meta's Ad Library for businesses already paying for ads. Its last run: 18 found, every one paying for ads, none with a working website. 118 already in the ledger, so none turned up twice. $0 a run, because it drives a browser on our own machine."
+  },
+  "price": {
+    "amount": "$500 setup, then $299 a month",
+    "terms": "That is the lead engine. An automation or an AI agent is from $1,500, quoted per job once we know what it is. The price and the delivery date go in writing before we start.",
+    "included": [
+      "A checked list every month, your city and trade",
+      "A personal message drafted for every lead",
+      "Every lead checked before it reaches you"
+    ],
+    "extras": "An automation or an AI agent is separate, from $1,500 and quoted per job. An AI receptionist is its own service at $1,500 setup, then $149 a month.",
+    "note": "Pay on delivery, and the automation or the agent is yours."
+  },
+  "faq": [
+    {
+      "q": "Does it send the messages for me?",
+      "a": "No. Every message is drafted, never sent automatically. You read it, change it if you want, and send it yourself. It is your name on it."
+    },
+    {
+      "q": "Where do the leads come from?",
+      "a": "Google Maps, for businesses with plenty of reviews and no website, pointed at your city and trade. Each one is checked before it reaches you."
+    },
+    {
+      "q": "Is it fully automatic?",
+      "a": "No. Some steps run on their own and some we run by hand, and every lead is checked. The figures on this page are recorded results from real runs, not a live feed."
+    },
+    {
+      "q": "What do I own after delivery?",
+      "a": "An automation or an agent is yours. The files are handed over when you pay on delivery. The lead engine is different. It is a monthly service, $299 a month after the $500 setup. You get the checked list each month, not the engine itself."
+    },
+    {
+      "q": "Why does automation say from $1,500?",
+      "a": "Because we do not know what yours needs to do yet. Tell us the business and the job, and you get a fixed price and a delivery date in writing before any work starts. If it needs to answer the phone, that is the AI receptionist, priced separately at $1,500 setup, then $149 a month."
+    }
+  ],
+  "close": {
+    "headline_line1": "Tell us the business and the job.",
+    "headline_line2": "You get a price and a date in writing."
+  }
+}

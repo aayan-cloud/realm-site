@@ -1,0 +1,102 @@
+{
+  "slug": "receptionist",
+  "want": "receptionist",
+  "number": "03",
+  "service_name": "AI receptionist",
+  "page_title": "AI receptionist - Realm Systems",
+  "meta_description": "An AI receptionist that answers calls and texts while you are on a job, asks the right questions and texts you the enquiry. $1,500 setup, then $149 a month.",
+  "hero": {
+    "eyebrow_right": "$1,500 setup, then $149 a month",
+    "headline_line1": "You cannot answer the phone on a job.",
+    "headline_line2": "Now you do not have to.",
+    "lead": "We set up an assistant that answers your texts and calls while you are on a job. It asks the customer the right questions one at a time, then sends you the whole enquiry as one text."
+  },
+  "problem": {
+    "headline": "The phone rings when your hands are full.",
+    "points": [
+      {
+        "title": "The phone rings out",
+        "text": "You are under a floor with your hands full. It rings, it stops, and they ring the next name on the list."
+      },
+      {
+        "title": "Sunday night, nobody answers",
+        "text": "The boiler goes on a Sunday night. If your phone goes to voicemail, they keep ringing round."
+      },
+      {
+        "title": "You ring back blind",
+        "text": "A voicemail says call me back about the leak. No address, no postcode, no idea if it is urgent, and when you ring back they are not answering."
+      }
+    ]
+  },
+  "get": {
+    "headline": "What you are paying for.",
+    "items": [
+      {
+        "title": "Texts and calls answered",
+        "text": "SMS, WhatsApp, web chat and phone calls while you are on a job."
+      },
+      {
+        "title": "The right questions, one at a time",
+        "text": "Name, mobile, address with postcode, what the problem is, where, since when, how urgent, and a preferred day or time."
+      },
+      {
+        "title": "One text with the whole enquiry",
+        "text": "When the enquiry is complete, one text lands on your phone with all of it. If the customer goes quiet, you get whatever was collected so far."
+      },
+      {
+        "title": "Safety line first",
+        "text": "Gas smell, carbon monoxide alarm, sparking, or water near electrics: it gives the safety line before it asks anything else."
+      },
+      {
+        "title": "Time-wasters dealt with",
+        "text": "Out-of-area enquiries are declined politely, and sales spam gets one fixed reply."
+      },
+      {
+        "title": "Runs on a model we host",
+        "text": "Not a cloud AI like ChatGPT, and nothing your customers say is used to train anything."
+      }
+    ]
+  },
+  "proof": {
+    "headline": "One enquiry, start to finish.",
+    "caption": "The assistant handling a dripping pipe under a kitchen sink. Northside Plumbing and Heating and the customer are made up. The replies are what it actually sent."
+  },
+  "price": {
+    "amount": "$1,500 setup, then $149 a month",
+    "terms": "A fixed price and a delivery date in writing before any work starts. Setup is paid on delivery, then $149 a month while it runs.",
+    "included": [
+      "Answers web chat, SMS, WhatsApp and calls while you are on a job. Texts and calls need a number on your account, priced below.",
+      "Configured to your trade, hours, services, area and emergency lines",
+      "A structured summary texted to you when an enquiry is complete, and whatever was collected if the customer goes quiet",
+      "Runs on a model we host, nothing used for training"
+    ],
+    "extras": "SMS and phone calls need a number from Twilio or Telnyx, on your own account. That is about $1 to $2 a month plus roughly a cent or two a minute, on top of the monthly fee. WhatsApp needs a WhatsApp Business number as well.",
+    "note": "Pay on delivery, once you have seen it answering for your real business, not a mockup."
+  },
+  "faq": [
+    {
+      "q": "Will customers know it is not a person?",
+      "a": "Yes. Its first message says it is the automated assistant for your business. Asked if it is a real person, it says it is not, and that you, a real person, will text back. That is one of 17 scripted customers we test it against. The others include a gas smell, a price hunter, an angry customer, a Polish speaker and someone fishing for a discount code."
+    },
+    {
+      "q": "What will it not do?",
+      "a": "It never quotes prices, never books a slot, never promises an arrival time and never takes payment. If a customer asks something it has not been told about your business, it says it will pass that to you and moves on. It collects the enquiry, tells the customer you will text back to confirm, and leaves the pricing and the booking to you."
+    },
+    {
+      "q": "What happens if someone smells gas?",
+      "a": "It gives the safety line first, before any questions. A gas smell or a carbon monoxide alarm gets the gas emergency line, in the UK 0800 111 999, and 999 if anyone is unwell. Sparking, or water reaching lights or sockets, gets a different line: keep away, fuse box only if it is safe, 999 for smoke or fire. Then it takes name, mobile and address and hands the enquiry to you marked emergency. You give us the lines for your area when we set it up."
+    },
+    {
+      "q": "Where do my customers' details go?",
+      "a": "To a model on a server we run ourselves, not a cloud AI like ChatGPT. Nothing is used to train anything. The enquiry goes to your phone as a text, and a copy is kept on our server. The customer is told you will text back."
+    },
+    {
+      "q": "What happens after delivery?",
+      "a": "It runs on our server for $149 a month. Your name, hours, services, area and emergency lines sit in one file, so new hours or a new service is a text to us, not a rebuild. If it is on a phone line, the Twilio or Telnyx number stays on your own account, about $1 to $2 a month plus roughly a cent or two a minute."
+    }
+  ],
+  "close": {
+    "headline_line1": "Tell us the business and the city.",
+    "headline_line2": "You get a price and a date in writing."
+  }
+}

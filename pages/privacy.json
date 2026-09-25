@@ -1,0 +1,61 @@
+{
+  "page_title": "Privacy - Realm Systems",
+  "meta_description": "What this site collects, where it goes, and how to have it removed. No accounts, no cookies of our own, no tracking pixels.",
+  "title": "What we keep, and why.",
+  "lead": "Short, because there is not much. This page says what the site collects, where it goes, and how to have it removed.",
+  "updated": "25 September 2026",
+  "sections": [
+    {
+      "h": "Who this is",
+      "p": [
+        "Realm Systems is an independent digital studio. Anything about your data goes to realmsystems.hq@gmail.com and is answered by the person who built the site."
+      ]
+    },
+    {
+      "h": "What the site itself collects",
+      "p": [
+        "Nothing on its own. There are no accounts, no cookies set by us, and no analytics or tracking pixels at the time of writing.",
+        "Two things on the site come from other servers. The fonts load from Google Fonts, so your browser asks Google for them. The work section shows one of our other sites inside a frame, hosted on GitHub Pages, and loading it is an ordinary page request to that host. Both see what any web server sees: your address and browser type."
+      ]
+    },
+    {
+      "h": "The start form",
+      "p": [
+        "The form asks for a business name, a trade, a city, a way to contact you, what you want, and it notes which page you sent it from. It goes to a spreadsheet in our Google account through a Google Apps Script. If that fails, your browser copies the text and opens Instagram so you can send it to us as a message instead.",
+        "We use it for one thing: to come back to you with a quote. It is kept until the job is finished or you ask for it to be deleted, and it is not sold or passed to anyone."
+      ]
+    },
+    {
+      "h": "Instagram and email",
+      "p": [
+        "Messages you send us on Instagram or by email sit with those services under their own terms. We keep them for as long as we need them to reply and to do the work."
+      ]
+    },
+    {
+      "h": "Demos",
+      "p": [
+        "The AI receptionist demo takes whatever a visitor types, such as a name, a number, an address and a problem, so the demo can show the summary the business owner would receive. The business in the demo is fictional. If you try it, use made-up details. Demo entries are cleared when we reset it.",
+        "Text conversations in the demo are processed on a machine we run ourselves. They are not sent to a large cloud AI provider and are not used to train anything. A voice call in the demo uses your browser's own speech recognition, which on Chrome is Google's and on Safari is Apple's."
+      ]
+    },
+    {
+      "h": "Client work",
+      "p": [
+        "When we build something for you, your customers' data lives in systems you own. We touch it only to build and to fix, and we do not reuse it anywhere else."
+      ]
+    },
+    {
+      "h": "Advertising",
+      "p": [
+        "If we run ads on Meta or Google, this page will name any measurement pixel before it goes live."
+      ]
+    },
+    {
+      "h": "Your side of it",
+      "p": [
+        "Email us to ask what we hold about you or to have it deleted. We answer within a few days. This site is not aimed at anyone under 18.",
+        "When this page changes, the date at the top changes with it."
+      ]
+    }
+  ]
+}
