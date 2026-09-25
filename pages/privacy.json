@@ -3,7 +3,7 @@
   "meta_description": "What this site collects, where it goes, and how to have it removed. No accounts, no cookies of our own, no tracking pixels.",
   "title": "What we keep, and why.",
   "lead": "Short, because there is not much. This page says what the site collects, where it goes, and how to have it removed.",
-  "updated": "25 September 2026",
+  "updated": "26 September 2026",
   "sections": [
     {
       "h": "Who this is",
@@ -21,14 +21,14 @@
     {
       "h": "The start form",
       "p": [
-        "The form asks for a business name, a trade, a city, a way to contact you, what you want, and it notes which page you sent it from. It goes to a spreadsheet in our Google account through a Google Apps Script. If that fails, your browser copies the text and opens Instagram so you can send it to us as a message instead.",
+        "The form asks for a business name, a trade, a city, a way to contact you, what you want, and it notes which page you sent it from. It goes to a spreadsheet in our Google account through a Google Apps Script. If that fails, your browser opens an email to team@realmsystems.net with the same details instead.",
         "We use it for one thing: to come back to you with a quote. It is kept until the job is finished or you ask for it to be deleted, and it is not sold or passed to anyone."
       ]
     },
     {
-      "h": "Instagram and email",
+      "h": "Email",
       "p": [
-        "Messages you send us on Instagram or by email sit with those services under their own terms. We keep them for as long as we need them to reply and to do the work."
+        "Mail to team@realmsystems.net is forwarded by Cloudflare to a Google mailbox, so it sits with those two services under their own terms. We keep it for as long as we need it to reply and to do the work."
       ]
     },
     {

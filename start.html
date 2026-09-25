@@ -66,8 +66,8 @@
           </div>
 
           <div class="field">
-            <label for="contact">Your email or Instagram</label>
-            <input id="contact" name="contact" autocomplete="email" placeholder="you@example.com or @handle" required>
+            <label for="contact">Your email</label>
+            <input id="contact" name="contact" autocomplete="email" type="email" inputmode="email" placeholder="you@example.com" required>
           </div>
 
           <div class="field">
@@ -141,9 +141,9 @@
 // Submissions go to a Google Apps Script web app, which appends a row to a
 // Google Sheet Aayan owns. No third-party form service, nothing paid, and the
 // data never leaves his own Drive. If the endpoint is empty or fails, the page
-// hands the visitor to Instagram instead, so it is never a dead end.
+// opens a prefilled email to team@ instead, so it is never a dead end.
 var ENDPOINT = 'https://script.google.com/macros/s/AKfycbwzKY5j8aSloij5__U_3FsemTBagdycBbcEyoiUeWYvPrEYiW2Sy6R4QW8zdZ_brTf6/exec';
-var DM = 'https://ig.me/m/realmsystems';
+var MAIL = 'team@realmsystems.net';
 
 (function () {
   document.getElementById('year').textContent = new Date().getFullYear();
@@ -151,7 +151,7 @@ var DM = 'https://ig.me/m/realmsystems';
   var form = document.getElementById('f');
   var go = document.getElementById('go');
   var msg = document.getElementById('msg');
-  var names = { business: 'the business name', trade: 'what the business does', city: 'the city', contact: 'where we can reply' };
+  var names = { business: 'the business name', trade: 'what the business does', city: 'the city', contact: 'your email' };
 
   function say(text, ok) {
     msg.textContent = text;
@@ -179,26 +179,14 @@ var DM = 'https://ig.me/m/realmsystems';
     }
 
     var data = new FormData(form);
-    var toInstagram = function () {
-      var lines = ['Enquiry from the site', ''];
-      data.forEach(function (v, k) { if (String(v).trim()) lines.push(k + ': ' + v); });
-      var text = lines.join('\n');
-      var opened = function () { window.open(DM, '_blank', 'noopener'); };
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(function () {
-          say('Copied your details. Instagram is opening: paste them into the message and send.', true);
-          opened();
-        }, function () {
-          say('Message us on Instagram with the business and the city and we will pick it up there.', false);
-          opened();
-        });
-      } else {
-        say('Message us on Instagram with the business and the city and we will pick it up there.', false);
-        opened();
-      }
+    var toEmail = function () {
+      var lines = [];
+      data.forEach(function (v, k) { if (k !== 'page' && String(v).trim()) lines.push(k + ': ' + v); });
+      say('That did not go through. Your email app is opening with the details, or send them to ' + MAIL + '.', false);
+      location.href = 'mailto:' + MAIL + '?subject=' + encodeURIComponent('Enquiry from the site') + '&body=' + encodeURIComponent(lines.join('\n'));
     };
 
-    if (!ENDPOINT) { toInstagram(); return; }
+    if (!ENDPOINT) { toEmail(); return; }
 
     data.append('page', location.href);
     go.disabled = true;
@@ -223,8 +211,7 @@ var DM = 'https://ig.me/m/realmsystems';
       .catch(function () {
         go.disabled = false;
         go.textContent = 'Send it';
-        say('That did not go through. Message us on Instagram instead.', false);
-        toInstagram();
+        toEmail();
       });
   });
 })();
