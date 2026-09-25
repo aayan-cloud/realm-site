@@ -4,17 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Start a job - Realm Systems</title>
-<meta name="description" content="Tell us the trade and the city. We come back with what the system finds in your area, before you pay anything.">
+<meta name="description" content="Tell us the business and the city. You get a fixed price and a delivery date in writing within a day, and nothing is owed for asking.">
 <meta name="robots" content="index,follow">
 <link rel="icon" href="assets/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;700;800;900&family=Geist+Mono:wght@500;700&display=swap" rel="stylesheet">
 <script>document.documentElement.className += ' js';</script>
-<link rel="stylesheet" href="start.css?v=stage2">
+<link rel="stylesheet" href="start.css?v=stage3">
 </head>
 <body>
-
 
 <header class="nav">
   <div class="wrap nav__in">
@@ -28,10 +27,10 @@
 
     <div>
       <span class="label">Start a job</span>
-      <h1 style="margin-top:.7rem">Tell us the trade and the city.</h1>
+      <h1 style="margin-top:.7rem">Tell us the business and the city.</h1>
       <p class="lead" style="margin-top:1.1rem">
-        Nothing is owed for answering this. We come back with what the system actually finds
-        in your area, and you decide from there.
+        Nothing is owed for asking. You get a fixed price and a delivery date in writing within a day,
+        and you decide from there.
       </p>
 
       <div class="card" style="margin-top:1.8rem">
@@ -43,36 +42,35 @@
 
           <div class="pair">
             <div class="field">
-              <label for="trade">Trade</label>
-              <input id="trade" name="trade" placeholder="Roofing, dental, cleaning" required>
+              <label for="trade">What the business does</label>
+              <input id="trade" name="trade" placeholder="Plumbing, roofing, cleaning" required>
             </div>
             <div class="field">
               <label for="city">City</label>
-              <input id="city" name="city" autocomplete="address-level2" required>
+              <input id="city" name="city" autocomplete="address-level2" placeholder="Houston, Calgary" required>
             </div>
           </div>
 
           <div class="field">
             <label for="want">What you want</label>
             <select id="want" name="want">
-              <option value="leads">A lead engine - $500 setup, then $299 a month</option>
-              <option value="website">A website - $1,000 one-off</option>
-              <option value="both">Both</option>
-              <option value="receptionist">An AI receptionist - $499 setup, then $149 a month</option>
-              <option value="automation">An automation or an AI agent - from $2,500, quoted per job</option>
-              <option value="3d">A 3D product site - $4,000 one-off</option>
-              <option value="unsure">Not sure yet</option>
+              <option value="website">Website: $1,000 one-off</option>
+              <option value="receptionist">AI receptionist: $499 setup, then $149 a month</option>
+              <option value="leads">Lead engine: $500 setup, then $299 a month</option>
+              <option value="automation">Automation or AI agent: from $2,500, quoted per job</option>
+              <option value="3d">3D product site: $4,000 one-off</option>
+              <option value="unsure" selected>Not sure yet</option>
             </select>
           </div>
 
           <div class="field">
-            <label for="site">Your website <span class="hint">- leave empty if there isn't one</span></label>
-            <input id="site" name="site" type="url" inputmode="url" placeholder="https://">
+            <label for="contact">Your email or Instagram</label>
+            <input id="contact" name="contact" autocomplete="email" placeholder="you@example.com or @handle" required>
           </div>
 
           <div class="field">
-            <label for="contact">Where we reply <span class="hint">- email or Instagram handle</span></label>
-            <input id="contact" name="contact" autocomplete="email" required>
+            <label for="site">Your current website <span class="hint">- leave empty if there isn't one</span></label>
+            <input id="site" name="site" type="url" inputmode="url" placeholder="https://">
           </div>
 
           <div class="field">
@@ -95,24 +93,22 @@
         <div class="step">
           <div class="step__n">1</div>
           <div>
-            <h3>We run it on your area.</h3>
-            <p>Your trade, your city, businesses already paying for ads.</p>
+            <h3>You get a quote, not a pitch.</h3>
+            <p>Within a day: a fixed price and a delivery date, in writing. Nothing starts until you say yes.</p>
           </div>
         </div>
         <div class="step">
           <div class="step__n">2</div>
           <div>
-            <h3>You get a quote, not a pitch.</h3>
-            <p>A fixed price and a delivery date, in writing. Nothing starts until you
-              say yes to it.</p>
+            <h3>We build it on your real business.</h3>
+            <p>You see it working with your name, your number and your area, not a mockup.</p>
           </div>
         </div>
         <div class="step">
           <div class="step__n">3</div>
           <div>
-            <h3>Then it is yours.</h3>
-            <p>You see it working on your real business, pay on delivery, and own it
-              outright. For the lead engine, the first list comes with month one.</p>
+            <h3>Pay on delivery. It's yours.</h3>
+            <p>The site, the automation or the agent is yours. Monthly services run month to month.</p>
           </div>
         </div>
       </div>
@@ -121,9 +117,9 @@
 
       <span class="label">Prices</span>
       <div style="margin-top:.8rem">
-        <div class="price"><b>Lead engine</b><span><strong>$500</strong> setup, then<br><strong>$299</strong> a month</span></div>
         <div class="price"><b>Website</b><span><strong>$1,000</strong> one-off</span></div>
         <div class="price"><b>AI receptionist</b><span><strong>$499</strong> setup, then<br><strong>$149</strong> a month</span></div>
+        <div class="price"><b>Lead engine</b><span><strong>$500</strong> setup, then<br><strong>$299</strong> a month</span></div>
         <div class="price"><b>Automation or AI agent</b><span>from <strong>$2,500</strong>, quoted per job</span></div>
         <div class="price"><b>3D product site</b><span><strong>$4,000</strong> one-off</span></div>
       </div>
@@ -135,18 +131,15 @@
 <footer>
   <div class="wrap foot">
     <span>Realm Systems</span>
-    <span id="year">2026</span>
+    <span><span id="year">2026</span> · <a href="privacy.html">Privacy</a></span>
   </div>
 </footer>
 
 <script>
 // Submissions go to a Google Apps Script web app, which appends a row to a
 // Google Sheet Aayan owns. No third-party form service, nothing paid, and the
-// data never leaves his own Drive.
-//
-// TO TURN THE FORM ON: deploy tools/form-endpoint.gs (see README) and paste the
-// /exec URL here. While this is empty the form stays visible but tells people to
-// use Instagram instead, so the page is never a dead end.
+// data never leaves his own Drive. If the endpoint is empty or fails, the page
+// hands the visitor to Instagram instead, so it is never a dead end.
 var ENDPOINT = 'https://script.google.com/macros/s/AKfycbwzKY5j8aSloij5__U_3FsemTBagdycBbcEyoiUeWYvPrEYiW2Sy6R4QW8zdZ_brTf6/exec';
 var DM = 'https://ig.me/m/realmsystems';
 
@@ -156,6 +149,7 @@ var DM = 'https://ig.me/m/realmsystems';
   var form = document.getElementById('f');
   var go = document.getElementById('go');
   var msg = document.getElementById('msg');
+  var names = { business: 'the business name', trade: 'what the business does', city: 'the city', contact: 'where we can reply' };
 
   function say(text, ok) {
     msg.textContent = text;
@@ -163,9 +157,9 @@ var DM = 'https://ig.me/m/realmsystems';
     msg.style.display = 'block';
   }
 
-  // The prices on the site deep-link here with ?want=leads, so the right option
-  // is already chosen when the page opens.
-  var want = new URLSearchParams(location.search).get('want');
+  // The service pages deep-link here with ?want=receptionist and so on, so the
+  // right option is already chosen when the page opens.
+  var want = new URLSearchParams(location.search).get('want') || (location.hash.match(/^#(\w+)$/) || [])[1];
   if (want) {
     var sel = document.getElementById('want');
     for (var i = 0; i < sel.options.length; i++) {
@@ -179,34 +173,30 @@ var DM = 'https://ig.me/m/realmsystems';
     var required = ['business', 'trade', 'city', 'contact'];
     for (var i = 0; i < required.length; i++) {
       var el = document.getElementById(required[i]);
-      if (!el.value.trim()) { el.focus(); say('Fill in ' + required[i] + '.', false); return; }
+      if (!el.value.trim()) { el.focus(); say('Add ' + names[required[i]] + ' and send again.', false); return; }
     }
 
     var data = new FormData(form);
-
-    // No endpoint deployed yet: rather than lose the submission, put it on the
-    // clipboard and open the DM so the visitor pastes it in one action. Not as
-    // good as the sheet, but it is a path that works with no backend at all.
-    if (!ENDPOINT) {
+    var toInstagram = function () {
       var lines = ['Enquiry from the site', ''];
       data.forEach(function (v, k) { if (String(v).trim()) lines.push(k + ': ' + v); });
       var text = lines.join('\n');
       var opened = function () { window.open(DM, '_blank', 'noopener'); };
-
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(function () {
-          say('Copied your details. Instagram is opening - paste it into the message and send.', true);
+          say('Copied your details. Instagram is opening: paste them into the message and send.', true);
           opened();
         }, function () {
-          say('Message us on Instagram with the trade and the city and we will pick it up there.', false);
+          say('Message us on Instagram with the business and the city and we will pick it up there.', false);
           opened();
         });
       } else {
-        say('Message us on Instagram with the trade and the city and we will pick it up there.', false);
+        say('Message us on Instagram with the business and the city and we will pick it up there.', false);
         opened();
       }
-      return;
-    }
+    };
+
+    if (!ENDPOINT) { toInstagram(); return; }
 
     data.append('page', location.href);
     go.disabled = true;
@@ -232,6 +222,7 @@ var DM = 'https://ig.me/m/realmsystems';
         go.disabled = false;
         go.textContent = 'Send it';
         say('That did not go through. Message us on Instagram instead.', false);
+        toInstagram();
       });
   });
 })();
