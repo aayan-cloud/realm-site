@@ -4,9 +4,9 @@
   "number": "04",
   "service_name": "Lead engine, automation or an AI agent",
   "page_title": "Lead engine, automation or an AI agent - Realm Systems",
-  "meta_description": "A lead engine that finds and checks businesses in your city and drafts a message for each. $500 setup, then $299 a month. Automation from $1,500.",
+  "meta_description": "A lead engine that finds and checks businesses in your city and drafts a message for each. $500 setup, then $299 a month. Automation from $2,500.",
   "hero": {
-    "eyebrow_right": "$500 setup, then $299 a month. Automation from $1,500",
+    "eyebrow_right": "$500 setup, then $299 a month. Automation from $2,500",
     "headline_line1": "Chasing new work is a second job.",
     "headline_line2": "We build the system that does it.",
     "lead": "A lead engine that finds businesses in your city and trade, checks each one and drafts you a personal message to send. Or an automation or an AI agent, built for the job that eats your week and quoted once we know what it is."
@@ -63,13 +63,13 @@
   },
   "price": {
     "amount": "$500 setup, then $299 a month",
-    "terms": "That is the lead engine. An automation or an AI agent is from $1,500, quoted per job once we know what it is. The price and the delivery date go in writing before we start.",
+    "terms": "That is the lead engine. An automation or an AI agent is from $2,500, quoted per job once we know what it is. The price and the delivery date go in writing before we start.",
     "included": [
       "A checked list every month, your city and trade",
       "A personal message drafted for every lead",
       "Every lead checked before it reaches you"
     ],
-    "extras": "An automation or an AI agent is separate, from $1,500 and quoted per job. An AI receptionist is its own service at $1,500 setup, then $149 a month.",
+    "extras": "An automation or an AI agent is separate, from $2,500 and quoted per job. An AI receptionist is its own service at $499 setup, then $149 a month.",
     "note": "Pay on delivery, and the automation or the agent is yours."
   },
   "faq": [
@@ -90,8 +90,8 @@
       "a": "An automation or an agent is yours. The files are handed over when you pay on delivery. The lead engine is different. It is a monthly service, $299 a month after the $500 setup. You get the checked list each month, not the engine itself."
     },
     {
-      "q": "Why does automation say from $1,500?",
-      "a": "Because we do not know what yours needs to do yet. Tell us the business and the job, and you get a fixed price and a delivery date in writing before any work starts. If it needs to answer the phone, that is the AI receptionist, priced separately at $1,500 setup, then $149 a month."
+      "q": "Why does automation say from $2,500?",
+      "a": "Because we do not know what yours needs to do yet. Tell us the business and the job, and you get a fixed price and a delivery date in writing before any work starts. If it needs to answer the phone, that is the AI receptionist, priced separately at $499 setup, then $149 a month."
     }
   ],
   "close": {
