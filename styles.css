@@ -68,3 +68,8 @@
 .prose h2{font-size:clamp(28px,3vw,44px);margin:64px 0 20px;letter-spacing:-.04em;line-height:1.05}
 .prose p{font-size:16px;line-height:1.6;color:#4a4a45;margin-bottom:14px}
 @media(max-width:760px){.points{grid-template-columns:1fr;gap:26px}.gets li{grid-template-columns:1fr;gap:6px}.pricerow{grid-template-columns:1fr;gap:26px}.chat{grid-template-columns:1fr}.chat__screen{min-height:0}.pricecard{margin:30px 0 0;max-width:100%}.block{padding-top:70px}.block h2{margin-bottom:34px}}
+.foot__links{display:flex;flex-wrap:wrap;gap:6px 18px}
+.foot__links a{color:var(--muted);text-decoration:none;border-bottom:1px solid transparent}
+.foot__links a:hover{color:var(--ink);border-bottom-color:var(--ink)}
+.svc__note{font-size:15px;color:var(--muted);max-width:44ch;margin:-50px 0 40px}
+@media(max-width:760px){.svc__note{margin:-30px 0 26px;font-size:13px}.foot__links{width:100%}}
