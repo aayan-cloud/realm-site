@@ -1,26 +1,28 @@
-/* The white build as a full-bleed stage, scrubbed from the Blender renders of the client build:
-   72 frames of a full turn, then 48 frames of it coming apart. The page's own scroll is the
-   scrubber. Renders instead of live 3D because the renders have real glass, shadows and light
-   and the browser could not match them at 60 frames a second. */
+/* The white build in the same framed exhibit as the Apex site: hover and scroll over the frame
+   to turn it, keep going to take it apart; swipe on a phone. The frames are the Blender renders
+   of the client build (72 of a full turn, 48 of it coming apart), because the renders have real
+   glass, shadows and light and a live model in the browser never matched them. */
 (() => {
   'use strict';
   const stage = document.getElementById('pc-stage');
-  const pin = document.getElementById('pc-pin');
+  const frame = document.getElementById('pc-frame');
+  const screen = document.getElementById('pc-screen');
   const canvas = document.getElementById('pc-glb');
-  if (!stage || !pin || !canvas) return;
+  if (!stage || !frame || !screen || !canvas) return;
   const ctx = canvas.getContext('2d');
   const readout = document.getElementById('pc-readout');
   const parts = [...document.querySelectorAll('.pc-parts li')];
   const loadBar = document.getElementById('pc-load');
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const coarse = matchMedia('(hover: none)').matches;
+  const BG = '#0b0c0e';
 
-  const TURN = 72, OPEN = 48, N = TURN + OPEN;
+  const TURN = 72, OPEN = 48, N = TURN + OPEN, LAST = N - 1;
   const SET = coarse ? '720' : '1080';   // phones draw the frame small; the 720 set is a third of the bytes
   const src = (i) => `assets/pc/${SET}/${i < TURN ? 'turn_' + String(i).padStart(3, '0') : 'explode_' + String(i - TURN).padStart(3, '0')}.webp`;
   const frames = new Array(N).fill(null);
   let loaded = 0, inflight = 0, next = 0;
-  // Every sixth frame first, so the scrub works coarsely within a second, then the rest.
+  // Every sixth frame first, so scrubbing works coarsely within a second, then the rest.
   const order = [...Array(N).keys()].sort((a, b) => (a % 6 ? 1 : 0) - (b % 6 ? 1 : 0) || a - b);
   function pump() { while (inflight < 6 && next < order.length) load(order[next++]); }
   function load(i) {
@@ -32,77 +34,106 @@
       if (im.naturalWidth) {
         frames[i] = im; loaded++;
         if (loadBar) loadBar.style.transform = `scaleX(${(loaded / N).toFixed(3)})`;
-        if (loaded === 1) pin.classList.add('is-ready');
-        if (loaded === N) pin.classList.add('is-full');
+        if (loaded === 1) screen.classList.add('is-ready');
+        if (loaded === N) screen.classList.add('is-full');
         if (i === Math.round(cur)) draw(true);
       }
       pump();
     };
     im.src = src(i);
   }
-  // Nearest loaded frame, so scrubbing works while the set is still arriving.
-  function nearest(i) {
+  function nearest(i) {   // nearest loaded frame, so scrubbing works while the set is still arriving
     for (let d = 0; d < N; d++) { if (frames[i + d]) return frames[i + d]; if (frames[i - d]) return frames[i - d]; }
     return null;
   }
 
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
-  const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
-  const ease = (t) => 1 - Math.pow(1 - t, 3);
-  let target = 0, p = reduced ? 0.8 : 0, cur = 0, blend = 0, W = 0, H = 0, dpr = 1, running = false, visible = false, lastLabel = '';
+  let target = 0, cur = 0, W = 0, H = 0, dpr = 1, raf = 0, drawn = '', touched = false;
 
-  function progress() {
-    const r = stage.getBoundingClientRect();
-    target = reduced ? 0.8 : clamp(-r.top / Math.max(1, r.height - innerHeight), 0, 1);
-  }
-  // Square render, fitted to the stage: right of the headline on wide screens, below it on phones.
-  function layout() {
-    const wide = W / H >= 1.05;
-    const s = wide ? Math.min(H, W * 0.6) : Math.min(W * 1.15, H * 0.62);
-    return { x: wide ? W * 0.68 - s / 2 : (W - s) / 2, y: wide ? (H - s) / 2 : H * 0.6 - s / 2, s };
-  }
   function draw(force) {
     // The turn ends on the front view and the explode starts from a slightly different camera,
-    // so the two are crossfaded over a sliver of scroll instead of cut.
-    const turnF = Math.min(TURN - 1, Math.round(ease(smooth(0, 0.42, p)) * TURN));
-    const openF = TURN + Math.round(smooth(0.42, 0.9, p) * (OPEN - 1));
-    const a = smooth(0.40, 0.44, p);
-    const f = a < 0.5 ? turnF : openF;
-    if (!force && f === cur && Math.abs(a - blend) < 0.01) return;
-    cur = f; blend = a;
-    const A = nearest(turnF), B = nearest(openF);
-    if (!A && !B) return;
-    const { x, y, s } = layout();
+    // so those two frames are crossfaded instead of cut.
+    const n = Math.round(cur);
+    let A, B = null, a = 0;
+    if (cur > TURN - 1 && cur < TURN) { A = nearest(TURN - 1); B = nearest(TURN); a = cur - (TURN - 1); } else A = nearest(n);
+    const key = n + ':' + a.toFixed(2);
+    if (!force && key === drawn) return;
+    drawn = key;
+    if (!A) return;
+    const s = Math.min(W, H), x = (W - s) / 2, y = (H - s) / 2;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-    if (a < 1 && A) { ctx.globalAlpha = 1; ctx.drawImage(A, x, y, s, s); }
-    if (a > 0 && B) { ctx.globalAlpha = a; ctx.drawImage(B, x, y, s, s); ctx.globalAlpha = 1; }
-    const label = p < 0.4 ? 'Turning' : p < 0.9 ? 'Coming apart' : 'Every part, modelled';
-    if (readout && label !== lastLabel) { readout.textContent = label; lastLabel = label; pin.classList.toggle('is-end', p >= 0.9); }
+    ctx.fillStyle = BG; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1; ctx.drawImage(A, x, y, s, s);
+    if (B && a > 0) { ctx.globalAlpha = a; ctx.drawImage(B, x, y, s, s); ctx.globalAlpha = 1; }
+    // Soften the render's square edges into the box so the studio floor doesn't end in a line.
+    const fade = s * 0.1;
+    [[x, x + fade], [x + s, x + s - fade]].forEach(([from, to]) => {
+      const g = ctx.createLinearGradient(from, 0, to, 0);
+      g.addColorStop(0, BG); g.addColorStop(1, 'rgba(11,12,14,0)');
+      ctx.fillStyle = g; ctx.fillRect(Math.min(from, to), y, fade, s);
+    });
+    [[y, y + fade * 0.6], [y + s, y + s - fade * 0.6]].forEach(([from, to]) => {
+      const g = ctx.createLinearGradient(0, from, 0, to);
+      g.addColorStop(0, BG); g.addColorStop(1, 'rgba(11,12,14,0)');
+      ctx.fillStyle = g; ctx.fillRect(x, Math.min(from, to), s, fade * 0.6);
+    });
+  }
+  function ui() {
+    const n = Math.round(cur), p = n / LAST;
+    if (readout) {
+      readout.textContent = !touched ? (coarse ? 'SWIPE TO TURN →' : 'HOVER & SCROLL TO TURN ↓')
+        : n < TURN ? `TURN / ${Math.round(n / (TURN - 1) * 100)}%`
+        : n < LAST ? `COMING APART / ${Math.round((n - TURN) / (OPEN - 1) * 100)}%` : 'EVERY PART, MODELLED';
+    }
     parts.forEach((li) => li.classList.toggle('is-on', p >= +li.dataset.at));
   }
   function tick() {
-    if (!visible) { running = false; return; }
-    progress();
-    p += (target - p) * 0.14;
-    draw(false);
-    if (reduced) { running = false; return; }
-    requestAnimationFrame(tick);
+    raf = 0;
+    cur += (target - cur) * (reduced ? 1 : 0.18);
+    if (Math.abs(target - cur) < 0.02) cur = target;
+    draw(false); ui();
+    if (cur !== target) loop();
   }
-  function start() { running = true; requestAnimationFrame(tick); }
+  function loop() { if (!raf) raf = requestAnimationFrame(tick); }
+  function setTarget(v) { target = clamp(v, 0, LAST); touched = true; loop(); }
+
+  // Hover and scroll over the frame, like the Apex exhibit. At either end the page scrolls on.
+  screen.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || !e.deltaY) return;
+    const dir = Math.sign(e.deltaY);
+    if ((dir < 0 && target <= 0) || (dir > 0 && target >= LAST)) return;
+    e.preventDefault();
+    const delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+    setTarget(target + delta / 22);
+  }, { passive: false });
+  // Drag sideways (a finger on phones): one screen width is one full turn. Vertical swipes still scroll the page.
+  let dragX = null, dragFrom = 0;
+  screen.addEventListener('pointerdown', (e) => { dragX = e.clientX; dragFrom = target; try { screen.setPointerCapture(e.pointerId); } catch (_) {} });
+  screen.addEventListener('pointermove', (e) => { if (dragX === null) return; setTarget(dragFrom + (e.clientX - dragX) / Math.max(1, W) * TURN); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((t) => screen.addEventListener(t, () => { dragX = null; }));
+  screen.addEventListener('keydown', (e) => {
+    const step = { ArrowRight: 2, ArrowUp: 2, ArrowLeft: -2, ArrowDown: -2 }[e.key];
+    if (e.key === 'Home') setTarget(0); else if (e.key === 'End') setTarget(LAST); else if (step) setTarget(Math.round(target) + step); else return;
+    e.preventDefault();
+  });
+
+  // The frame leans with the page like the Apex frame does (same numbers as sections.js).
+  function tilt() {
+    if (reduced) return;
+    const r = stage.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > innerHeight) return;
+    const p = clamp((-r.top + innerHeight * 0.12) / (r.height * 0.8), 0, 1);
+    frame.style.transform = `rotateX(${7 - p * 4}deg) rotateY(${-7 + p * 5}deg) rotateZ(${-1 + p}deg)`;
+  }
+  let tiltRaf = 0;
+  addEventListener('scroll', () => { if (!tiltRaf) tiltRaf = requestAnimationFrame(() => { tiltRaf = 0; tilt(); }); }, { passive: true });
+
   function resize() {
-    W = pin.clientWidth; H = pin.clientHeight; dpr = Math.min(devicePixelRatio || 1, 2);
+    W = screen.clientWidth; H = screen.clientHeight; dpr = Math.min(devicePixelRatio || 1, 2);
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-    const nav = document.getElementById('nav');
-    if (nav) pin.style.setProperty('--nav-h', nav.offsetHeight + 'px');   // the sticky header sits over the stage
-    progress(); if (reduced) p = target;
-    draw(true);
+    draw(true); ui(); tilt();
   }
   addEventListener('resize', resize);
   resize();
   pump();
-  new IntersectionObserver((entries) => {
-    visible = entries.some((e) => e.isIntersecting);
-    if (visible && !running) start();
-  }, { rootMargin: '60%' }).observe(stage);
 })();
