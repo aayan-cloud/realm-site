@@ -72,11 +72,6 @@
       g.addColorStop(0, BG); g.addColorStop(1, 'rgba(11,12,14,0)');
       ctx.fillStyle = g; ctx.fillRect(Math.min(from, to), y, fade, s);
     });
-    [[y, y + fade * 0.6], [y + s, y + s - fade * 0.6]].forEach(([from, to]) => {
-      const g = ctx.createLinearGradient(0, from, 0, to);
-      g.addColorStop(0, BG); g.addColorStop(1, 'rgba(11,12,14,0)');
-      ctx.fillStyle = g; ctx.fillRect(x, Math.min(from, to), s, fade * 0.6);
-    });
   }
   function ui() {
     const n = Math.round(cur), p = n / LAST;
@@ -123,7 +118,7 @@
     const r = stage.getBoundingClientRect();
     if (r.bottom < 0 || r.top > innerHeight) return;
     const p = clamp((-r.top + innerHeight * 0.12) / (r.height * 0.8), 0, 1);
-    frame.style.transform = `rotateX(${7 - p * 4}deg) rotateY(${-7 + p * 5}deg) rotateZ(${-1 + p}deg)`;
+    frame.style.transform = `rotateX(${3 - p * 2}deg) rotateY(${-3 + p * 2}deg) rotateZ(${-0.4 + p * 0.4}deg)`;   // a third of the Apex lean
   }
   let tiltRaf = 0;
   addEventListener('scroll', () => { if (!tiltRaf) tiltRaf = requestAnimationFrame(() => { tiltRaf = 0; tilt(); }); }, { passive: true });
