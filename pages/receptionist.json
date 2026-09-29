@@ -75,7 +75,7 @@
       "The whole job texted to you when it is complete, and whatever was collected if the customer goes quiet",
       "Runs on a model we host, nothing used for training"
     ],
-    "extras": "Texts run on a phone number from Twilio or Telnyx, on your own account: about $1 to $2 a month plus a few pence per text. WhatsApp needs a WhatsApp Business number as well. Answering the call itself with a voice is a separate job; ask if you need it.",
+    "extras": "Texts run on a phone number from Twilio or Telnyx, on your own account: about $1 to $2 a month plus about a cent per text. WhatsApp needs a WhatsApp Business number as well. Want it to answer the call itself, with a voice? That is the Voice tier: $499 setup, then $299 a month, built on your line and paid on delivery like the rest. Call minutes run on the same number, about a cent a minute, billed to you directly.",
     "note": "Pay on delivery, once you have seen it answering for your real business, not a mockup."
   },
   "faq": [
@@ -89,7 +89,7 @@
     },
     {
       "q": "What will it not do?",
-      "a": "It does not answer the call with a voice. It texts back. It never quotes prices, never books a slot, never promises an arrival time and never takes payment. If a customer asks something it has not been told about your business, it says it will pass that to you and moves on."
+      "a": "This tier does not answer the call with a voice. It texts back. Voice answering is the Voice tier, $299 a month. It never quotes prices, never books a slot, never promises an arrival time and never takes payment. If a customer asks something it has not been told about your business, it says it will pass that to you and moves on."
     },
     {
       "q": "What happens if someone smells gas?",
@@ -101,7 +101,7 @@
     },
     {
       "q": "What happens after delivery?",
-      "a": "It runs on our server for $149 a month. Your name, hours, services, area and emergency lines sit in one file, so new hours or a new service is a text to us, not a rebuild. The Twilio or Telnyx number stays on your own account, about $1 to $2 a month plus a few pence per text."
+      "a": "It runs on our server for $149 a month. Your name, hours, services, area and emergency lines sit in one file, so new hours or a new service is a text to us, not a rebuild. The Twilio or Telnyx number stays on your own account, about $1 to $2 a month plus about a cent per text."
     }
   ],
   "close": {

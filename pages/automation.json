@@ -69,7 +69,7 @@
       "A personal message drafted for every lead",
       "Every lead checked before it reaches you"
     ],
-    "extras": "An automation or an AI agent is separate, from $2,500 and quoted per job. An AI receptionist is its own service at $499 setup, then $149 a month.",
+    "extras": "An automation or an AI agent is separate, from $2,500 and quoted per job. An AI receptionist is its own service, from $499 setup, then $149 a month ($299 a month with voice answering).",
     "note": "Pay on delivery, and the automation or the agent is yours."
   },
   "faq": [
@@ -91,7 +91,7 @@
     },
     {
       "q": "Why does automation say from $2,500?",
-      "a": "Because we do not know what yours needs to do yet. Tell us the business and the job, and you get a fixed price and a delivery date in writing before any work starts. If it needs to answer the phone, that is the AI receptionist, priced separately at $499 setup, then $149 a month."
+      "a": "Because we do not know what yours needs to do yet. Tell us the business and the job, and you get a fixed price and a delivery date in writing before any work starts. If it needs to answer the phone, that is the AI receptionist, priced separately, from $499 setup, then $149 a month."
     }
   ],
   "close": {
