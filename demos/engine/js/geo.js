@@ -33,6 +33,24 @@ export function roundedBox(w, h, d, r, seg = 2) {
   return g;
 }
 
+// drop the triangles whose face normal's y passes a test (a face nobody sees)
+function dropFaces(g, test) {
+  g = g.index ? g.toNonIndexed() : g;
+  const P = g.attributes.position.array, keep = [];
+  for (let t = 0; t < P.length / 9; t++) {
+    const i = t * 9, ux = P[i + 3] - P[i], uy = P[i + 4] - P[i + 1], uz = P[i + 5] - P[i + 2], vx = P[i + 6] - P[i], vy = P[i + 7] - P[i + 1], vz = P[i + 8] - P[i + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx, l = Math.hypot(nx, ny, nz) || 1;
+    if (!test(ny / l)) keep.push(t);
+  }
+  const out = new THREE.BufferGeometry();
+  for (const [name, at] of Object.entries(g.attributes)) {
+    const s = at.itemSize, arr = new Float32Array(keep.length * 3 * s);
+    keep.forEach((t, k) => arr.set(at.array.subarray(t * 3 * s, t * 3 * s + 3 * s), k * 3 * s));
+    out.setAttribute(name, new THREE.BufferAttribute(arr, s));
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- lathe
 // A closed (r, y) profile turned about Y. The profile's direction is fixed here
 // so the normals always face out, and corners sharper than `crease` degrees get
@@ -305,12 +323,30 @@ export const span = (a, b, n, k = 0) => Array.from({ length: n + 1 }, (_, i) => 
   return a + (b - a) * w;
 });
 
-// a hexagon prism about Y with flat faces (bolt heads, nuts)
-export function hexPrism(r, h, y0 = -h / 2) {
-  const g = new THREE.CylinderGeometry(r, r, h, 6, 1, false).toNonIndexed();
-  g.translate(0, y0 + h / 2, 0);
-  g.computeVertexNormals();
-  return g;
+// A hex head or nut about Y, r across the corners, made the way one is made: a
+// hexagon bar with both ends turned off in a chamfer, so the corners are cut into
+// arcs and each end shows a round face inside the flats. Built as a twelve-sided
+// lathe and pressed onto the hexagon (every vertex outside the flats is pulled
+// onto them), so the flats are exact and the chamfer is a cone. A plain prism's
+// flat top caught the key as a bright square and read as a sticker; the cone
+// catches it as a ring, which is what says bolt.
+// A bolt head (head = true) is chamfered on top only and has no bottom face: it
+// sits on its washer face.
+export function hexPrism(r, h, y0 = -h / 2, head = false) {
+  const rf = r * Math.cos(Math.PI / 6), c = Math.min(0.2 * h, 0.13 * r), y1 = y0 + h;
+  const prof = head ? [[0, y0], [r, y0], [r, y1 - 1.7 * c], [rf - c, y1], [0, y1]] : [[0, y0], [rf - c, y0], [r, y0 + 1.7 * c], [r, y1 - 1.7 * c], [rf - c, y1], [0, y1]];
+  let g = lathe(prof, 12, { crease: 80 });
+  if (head) g = dropFaces(g, n => n < -0.9);
+  const p = g.attributes.position, S = Math.PI / 3;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), z = p.getZ(i), rr = Math.hypot(x, z);
+    if (rr < 1e-9) continue;
+    let d = (Math.atan2(x, z) - S / 2) % S;
+    if (d < 0) d += S;
+    const lim = rf / Math.cos(d - S / 2);
+    if (rr > lim) { p.setX(i, (x * lim) / rr); p.setZ(i, (z * lim) / rr); }
+  }
+  return creased(g, 40);
 }
 // shape (u, v) = (z, y); extrusion along X, centred on x = 0
 export function extrudeX(shape, depth, bevel = 0) {

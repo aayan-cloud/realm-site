@@ -8,6 +8,7 @@
 // floor darkens a little more, where the two actually meet.
 
 import * as THREE from 'three';
+import { STAND_DROP } from './engine.js';
 
 export function makeFloor(MID, BOX, REACH, bg) {
   const m = new THREE.MeshStandardMaterial({ color: 0x1a1b1e, roughness: 0.92, metalness: 0, envMapIntensity: 0.25 });
@@ -52,8 +53,9 @@ float rhFloorShadow(float s){
   m.customProgramCacheKey = () => 'rhFloor';
   const f = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), m);
   f.rotation.x = -Math.PI / 2;
-  // the engine stands on its sump (the drain plug is the lowest point)
-  f.position.set(MID.x, BOX.min.y - 0.0005, MID.z);
+  // the engine stands on its display stand, whose feet lift the lowest point of
+  // the engine (the drain plug) STAND_DROP clear of the floor (engine.js)
+  f.position.set(MID.x, BOX.min.y - STAND_DROP - 0.0005, MID.z);
   f.receiveShadow = true;
   f.name = 'floor';
   return f;

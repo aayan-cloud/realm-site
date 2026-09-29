@@ -86,7 +86,7 @@ vec3 rhHeat(float s){
   c = mix(c, vec3(0.376, 0.254, 0.107), smoothstep(0.000, 0.018, s));
   c = mix(c, vec3(0.584, 0.356, 0.102), smoothstep(0.018, 0.040, s));
   c = mix(c, vec3(0.330, 0.141, 0.045), smoothstep(0.040, 0.068, s));
-  c = mix(c, vec3(0.047, 0.078, 0.195), smoothstep(0.068, 0.098, s));
+  c = mix(c, vec3(0.062, 0.080, 0.140), smoothstep(0.068, 0.098, s));
   c = mix(c, vec3(0.159, 0.171, 0.216), smoothstep(0.098, 0.128, s));
   c = mix(c, vec3(0.275, 0.254, 0.235), smoothstep(0.128, 0.150, s));
   return c;
@@ -125,7 +125,7 @@ const MAIN = /* glsl */`
   float nM = rhNoise(rhP / 0.035 + 3.0) - 0.5;          // mottling, survives at any distance
   float nA = rhNoise(vec3(rhP.x / 0.0007, rhP.y / 0.009, rhP.z / 0.009) + 5.0) - 0.5;   // streaks along X
   float f0 = rhVis(6.0 * rhC, rhFw), f1 = rhVis(2.2 * rhC, rhFw), f2 = rhVis(rhC, rhFw);
-  float rhH = 0.0, rhR = 0.0, rhS = 0.0, rhD = 0.0;
+  float rhH = 0.0, rhR = 0.0, rhS = 0.0, rhD = 0.0, rhMet = 0.0;
   vec3 rhTint = vec3(1.0);
   vec3 rhE = vec3(0.0);
   if (rhK == 3) {
@@ -182,12 +182,17 @@ const MAIN = /* glsl */`
       // middle where the flame front has been: patchy, thickest in the centre, and
       // a darker tide mark where the deposit ends
       float top = smoothstep(uRhB.y - 0.0008, uRhB.y, rhP.y);
-      float patchy = 0.55 + 0.9 * (n0 + 0.6 * n1 * f1);
-      float carbon = clamp((1.0 - smoothstep(0.006, 0.030, rr)) * patchy, 0.0, 1.0) * top;
-      float tide = exp(-pow((rr - 0.029 - 0.004 * n0) / 0.0035, 2.0)) * top;
-      rhTint *= mix(vec3(1.0), vec3(0.30, 0.27, 0.24), uRhB.x * max(carbon, 0.55 * tide));
-      rhTint *= mix(vec3(1.0), vec3(0.93, 0.89, 0.84), top);
-      rhR = mix(rhR, 0.20 + 0.08 * n1 * f1 + 0.14 * carbon, top);
+      float edge = 0.025 + 0.007 * n0 + 0.003 * n1 * f1;          // where the deposit thins out
+      float carbon = (1.0 - smoothstep(edge - 0.008, edge + 0.004, rr)) * top;
+      float tide = exp(-pow((rr - edge - 0.0015) / 0.0022, 2.0)) * top * (1.0 - carbon);
+      rhTint *= mix(vec3(1.0), vec3(0.20, 0.185, 0.17), uRhB.x * carbon);
+      rhTint *= mix(vec3(1.0), vec3(0.55, 0.51, 0.47), uRhB.x * tide);
+      rhTint *= mix(vec3(1.0), vec3(0.58, 0.56, 0.53), top);
+      // carbon is a deposit, not metal: where it lies thick the crown is a dark,
+      // dull, non-metallic film, so the key and the combustion light do not flare
+      // off it
+      rhMet = -0.75 * uRhB.x * carbon;
+      rhR = mix(rhR, 0.22 + 0.06 * n1 * f1 + 0.10 * carbon, top);
       rhD += top * 0.05 * n2 * f2;
     }
   } else if (rhK == 4) {
@@ -225,9 +230,15 @@ const MAIN = /* glsl */`
     rhD += clamp((vRhW.y - uRhB.x) * uRhB.y, -0.16, 0.10);
   } else if (rhK == 7) {
     // stainless primaries: the heat tint and the glow both run by distance from
-    // the port, which the geometry carries in uv.x
-    float s = vRhUv.x;
-    rhTint = rhHeat(s) / max(diffuseColor.rgb, vec3(1e-3));
+    // the port, which the geometry carries in uv.x. No two primaries run at the
+    // same temperature, so each carries a seed in uv.y that stretches, shifts and
+    // desaturates its bands, and the band edges wander with the noise: all four
+    // tinted alike, at the same place, read as a shader, not as heat.
+    float s = vRhUv.x, sd = vRhUv.y;
+    float st = s * (0.80 + 0.40 * sd) + (sd - 0.5) * 0.016 + 0.007 * n1 * f1 + 0.006 * n0;
+    vec3 ht = rhHeat(st);
+    ht = mix(vec3(dot(ht, vec3(0.2126, 0.7152, 0.0722))), ht, 0.55 + 0.4 * sd);
+    rhTint = ht / max(diffuseColor.rgb, vec3(1e-3));
     rhE = uRhGlow * pow(max(0.0, 1.0 - s / 0.12), 1.6);
   } else if (rhK == 8) {
     // valve: ground stem, dark seat face; an exhaust valve's head runs at 700-800 C
@@ -317,7 +328,7 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.80, 0.81, 0.82), rhEdgeK);`)
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 roughnessFactor = clamp(roughnessFactor + rhR - 0.3 * rhEdgeK, 0.04, 1.0);`)
       .replace('#include <metalnessmap_fragment>', `#include <metalnessmap_fragment>
-metalnessFactor = mix(metalnessFactor, 1.0, rhEdgeK);`)
+metalnessFactor = mix(clamp(metalnessFactor + rhMet, 0.0, 1.0), 1.0, rhEdgeK);`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 if (uRhA.z > 0.0) normal = rhPerturb(-vViewPosition, normal, rhH * uRhA.z, faceDirection);`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
@@ -341,12 +352,14 @@ const SOFT_CLIP = /* glsl */`
   vec3 rhRef = max(outgoingLight - totalEmissiveRadiance, vec3(0.0));
   float rhPk = max(rhRef.r, max(rhRef.g, rhRef.b));
   const float rhK0 = 0.52;
-  // ...and on how fast the surface turns under the pixel: a glint is a light
-  // caught on a curve (a journal, a pulley rim, a rounded edge), so a flat face
-  // squared up to a softbox (a sprocket face, a machined flange) stays below
-  // white while the rim round it clips
-  float rhCurv = length(fwidth(vNormal));
-  float rhK1 = mix(0.96, mix(9.0, 0.96, smoothstep(0.18, 0.46, roughnessFactor)), smoothstep(0.004, 0.02, rhCurv));
+  // ...and on how tightly the surface is curved: a glint is a light caught on a
+  // curve (a journal, a pulley rim, a rounded edge), so a flat face squared up to
+  // a softbox (a sprocket face, a machined flange) stays below white while the
+  // rim round it clips. Curvature in world terms (1/radius, per metre), the
+  // normal's change over the position's change across the pixel, so the same
+  // part glints at every screen size and ratio.
+  float rhCurv = length(fwidth(vNormal)) / max(length(fwidth(vViewPosition)), 1e-7);
+  float rhK1 = mix(0.96, mix(9.0, 0.96, smoothstep(0.18, 0.46, roughnessFactor)), smoothstep(3.0, 12.0, rhCurv));
   if (rhPk > rhK0) rhRef *= (rhK0 + (rhK1 - rhK0) * (1.0 - exp(-(rhPk - rhK0) / (rhK1 - rhK0)))) / rhPk;
   outgoingLight = rhRef + totalEmissiveRadiance;
 }
@@ -362,7 +375,7 @@ export function makeMaterials() {
   const M = {
     // sand-cast aluminium: rough, speckled, slightly warm grey
     // (rough enough that a barrel bulge shows a broad sheen, not a polished tube)
-    cast: uber(std('cast_alloy', 0x9c9c9b, 0.9, 0.44, 1.0), 'cast', { cell: 0.00055, rough: 0.12, bump: 0.00018, speck: 0.30, speckColor: 0x5e5d5a }),
+    cast: uber(std('cast_alloy', 0x959595, 0.9, 0.45, 1.0), 'cast', { cell: 0.00055, rough: 0.12, bump: 0.00018, speck: 0.30, speckColor: 0x5e5d5a }),
     // the same alloy on the floor of a cored cavity: darker, rougher, never polished
     // the intake manifold: a rougher, duller sand casting than the machined block
     // cool silver-grey, as a cast manifold photographs; clay-beige before
@@ -370,7 +383,7 @@ export function makeMaterials() {
     // die-cast alternator housings: brighter and finer than a sand casting
     castAlt: uber(std('cast_alternator', 0xacadae, 0.9, 0.42, 1.0), 'cast', { cell: 0.0004, rough: 0.07, bump: 0.00006, speck: 0.16, speckColor: 0x7d7e80 }),
     // the head: the same alloy, cored by the ports
-    headCast: uber(std('cast_alloy', 0x9c9c9b, 0.9, 0.44, 1.0), 'cast', { cell: 0.00055, rough: 0.12, bump: 0.00018, speck: 0.30, speckColor: 0x5e5d5a, cored: true }),
+    headCast: uber(std('cast_alloy', 0x959595, 0.9, 0.45, 1.0), 'cast', { cell: 0.00055, rough: 0.12, bump: 0.00018, speck: 0.30, speckColor: 0x5e5d5a, cored: true }),
     // a combustion chamber: the same alloy under a film of carbon
     chamber: uber(std('chamber', 0x4a4643, 0.6, 0.62, 0.8), 'cast', { cell: 0.0006, rough: 0.08, bump: 0.0001, speck: 0.35, speckColor: 0x2e2c2a, cored: true }),
     castCore: uber(std('cast_core', 0x6d6c69, 0.75, 0.72, 0.7), 'cast', { cell: 0.0006, rough: 0.07, bump: 0.0001, speck: 0.3, speckColor: 0x4d4c49, cored: true }),
@@ -391,18 +404,22 @@ export function makeMaterials() {
     skirt: uber(std('skirt_coating', 0x3d3f42, 0.2, 0.7, 0.8), 'plain'),
     ring: uber(std('nitrided_ring', 0x6d7176, 1.0, 0.3, 1.1), 'plain'),
     pin: uber(std('wrist_pin', 0xd7dadd, 1.0, 0.12, 1.2), 'plain'),
-    lobe: uber(std('ground_lobe', 0xc7cace, 1.0, 0.26, 1.2), 'turned', { rough: 0.05, axis: X }),
+    lobe: uber(std('ground_lobe', 0xc7cace, 1.0, 0.24, 1.45), 'turned', { rough: 0.05, axis: X }),
     camCast: uber(std('cam_casting', 0x6a6e73, 0.9, 0.55, 1.0), 'cast', { cell: 0.0012, rough: 0.06, bump: 0.0004, speck: 0.3 }),
     valve: uber(std('valve', 0xd9dcdf, 1.0, 0.22, 1.2), 'valve', { speckColor: 0xc6c9cc, b: [0.1, 0, 0, 0] }),
     valveHot: uber(std('exhaust_valve', 0xd9dcdf, 1.0, 0.22, 1.2), 'valve', { speckColor: 0x5a534c, b: [0.25, 0, 0, 0] }),
     spring: uber(std('black_oxide_spring', 0x33363a, 0.9, 0.35, 1.1), 'plain'),
-    bucket: uber(std('bucket', 0xb8bcc0, 1.0, 0.25, 1.15), 'turned', { rough: 0.05, axis: Y }),
+    // polished tappet buckets: bright, and lifted in the reflections, because
+    // inside the head they see little of the studio and read as black otherwise
+    bucket: uber(std('bucket', 0xc8cbcf, 1.0, 0.17, 2.2), 'turned', { rough: 0.04, axis: Y }),
     // enamelled copper of the stator windings, seen through the alternator's vents
     winding: uber(std('stator_winding', 0x5a3219, 0.8, 0.5, 0.8), 'plain'),
     bronze: uber(std('copper_lead_bearing', 0xb07a52, 1.0, 0.32, 1.1), 'plain'),
-    bolt: uber(std('zinc_bolt', 0xb5b8bb, 1.0, 0.35, 1.1), 'plain'),
+    bolt: uber(std('zinc_bolt', 0x9fa3a7, 1.0, 0.28, 1.5), 'plain'),
     // cam cover: dark satin wrinkle paint; the wrinkle is relief and sheen, not colour
     cover: uber(std('wrinkle_paint', 0x1d1e21, 0.1, 0.56, 0.8), 'wrinkle', { cell: 0.0028, rough: 0.10, bump: 0.00022, speck: 0 }),
+    // the cover's inside: the bare casting under the paint, never painted
+    coverIn: uber(std('cover_inside', 0x8e8e8d, 0.85, 0.5, 1.1), 'cast', { cell: 0.0006, rough: 0.1, bump: 0.00012, speck: 0.3, speckColor: 0x5e5d5a }),
     belt: uber(std('epdm_belt', 0x121314, 0, 0.85, 0.6), 'belt', { bump: 0.0002, b: [0.008, 0, 0, 0] }),
     vbelt: uber(std('poly_v_belt', 0x141516, 0, 0.8, 0.6), 'belt', { bump: 0.0002, b: [0.0036, 0, 0, 0] }),
     // moulded glass-filled nylon: satin, so the timing cover's form reads
@@ -416,12 +433,18 @@ export function makeMaterials() {
     filter: uber(std('oil_filter', 0x22324a, 0.15, 0.62, 0.7), 'cast', { cell: 0.002, rough: 0.04, bump: 0.00005, speck: 0 }),
     filterPrint: uber(std('filter_print', 0x6f7c8e, 0.1, 0.6, 0.6), 'plain'),
     handle: uber(std('dipstick_handle', 0xd6961c, 0, 0.5, 0.6), 'plain'),
-    copper: uber(std('copper_badge', 0xa8683a, 1.0, 0.44, 0.9), 'turned', { rough: 0.05, axis: new THREE.Vector3(0, 1, 0) }),
+    // polished copper (the name plate's raised rim, mark and letters; the B+ washer)
+    copper: uber(std('copper_badge', 0xc27f4c, 1.0, 0.24, 1.1), 'plain'),
+    // the name plate's field: cast bronze darkened to a brown-black patina
+    badge: uber(std('badge_field', 0x2e231c, 0.7, 0.55, 0.8), 'cast', { cell: 0.0004, rough: 0.06, bump: 0.00004, speck: 0 }),
     ironCast: uber(std('cast_iron', 0x4a4d51, 0.8, 0.55, 1.0), 'cast', { cell: 0.0014, rough: 0.07, bump: 0.0004, speck: 0.3, speckColor: 0x3a3c3f }),
     // flywheel friction face: turned steel, not bronze
     friction: uber(std('friction_face', 0x8e9296, 1.0, 0.3, 1.15), 'turned', { rough: 0.07, axis: X }),
-    steel: uber(std('machined_steel', 0x9da1a6, 1.0, 0.3, 1.1), 'turned', { rough: 0.05, axis: X }),
-    darkSteel: uber(std('dark_steel', 0x4b4e52, 0.9, 0.4, 1.0), 'plain'),
+    steel: uber(std('machined_steel', 0xa3a7ab, 1.0, 0.22, 1.6), 'turned', { rough: 0.05, axis: X }),
+    // the throttle bore, machined and smooth; the butterfly plate in brass
+    bore: uber(std('throttle_bore', 0xbcbfc2, 1.0, 0.2, 1.1), 'plain'),
+    brass: uber(std('brass', 0xb08a52, 1.0, 0.32, 1.0), 'plain'),
+    darkSteel: uber(std('dark_steel', 0x4b4e52, 0.9, 0.32, 1.05), 'plain'),
     rubber: uber(std('rubber', 0x151617, 0, 0.8, 0.5), 'plain'),
     // section paint: signal red leaning to the brand's ember orange
     paint: uber(std('section_paint', 0xd0461e, 0, 0.52, 0.5), 'paint', { bump: 0.00012, b: [0.1, 0.35, 0.005, 0.04] }),

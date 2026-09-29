@@ -15,6 +15,25 @@ import * as THREE from 'three';
 import { prewarm } from './warm.js';
 import { BIAS } from './caps.js';
 
+// The film's shoulder. ACES on its own gives a highlight no headroom: its curve
+// only nears white for light four to five times the diffuse level, so a ground
+// journal catching the softbox stopped at about 88 % and every metal in the frame
+// read as grey paint. This keeps ACES through the midtones and the matte ceiling
+// (materials.js holds matte and flat faces under about 0.74 of it) and only then
+// opens the shoulder, rolling the top quarter up into white the way a print
+// clips on a glint. Installed as three's custom tone map, so every material keeps
+// its one program.
+export function installToneMap() {
+  THREE.ShaderChunk.tonemapping_pars_fragment = THREE.ShaderChunk.tonemapping_pars_fragment.replace(
+    'vec3 CustomToneMapping( vec3 color ) { return color; }',
+    `vec3 CustomToneMapping( vec3 color ) {
+  vec3 a = ACESFilmicToneMapping( color );
+  // on luminance, so a saturated colour (the section paint) keeps its hue
+  float k = 0.85 * smoothstep( 0.70, 0.97, dot( a, vec3( 0.2126, 0.7152, 0.0722 ) ) );
+  return saturate( a + ( vec3( 1.0 ) - a ) * k );
+}`);
+}
+
 const QUAD = new THREE.PlaneGeometry(2, 2);
 const QUAD_CAM = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
@@ -109,8 +128,10 @@ export class Post {
         fragColor = vec4(vec3(pow(occ, uPower)), 1.0);
       }`, {
       tDepth: { value: this.depthTexture }, uProjInv: { value: new THREE.Matrix4() },
-      uTexel: { value: new THREE.Vector2() }, uRadius: { value: 0.032 }, uBias: { value: 0.002 },
-      uIntensity: { value: 1.6 }, uPower: { value: 1.5 }, uProjScale: { value: 500 },
+      uTexel: { value: new THREE.Vector2() }, uRadius: { value: 0.040 }, uBias: { value: 0.002 },
+      // (deep enough to sit in the root of every rib and fillet on the crankcase and
+      // under the saddles in the head, which is where a casting's form is read)
+      uIntensity: { value: 2.4 }, uPower: { value: 1.7 }, uProjScale: { value: 500 },
       tDiffuse: { value: null },
     });
     // depth-aware blur, so occlusion does not bleed across silhouettes
@@ -173,7 +194,10 @@ export class Post {
           col.r = texture(tDiffuse, uv + off).r;
           col.b = texture(tDiffuse, uv - off).b;
         }
-        col *= mix(1.0, texture(tAO, uv).r, uUseAO);
+        // occlusion darkens what the room lights, not a glint: a specular line on
+        // a journal down in the crankcase still clips, as it does in a photograph
+        float gl = smoothstep(0.9, 2.5, max(col.r, max(col.g, col.b)));
+        col *= mix(1.0, texture(tAO, uv).r, uUseAO * (1.0 - 0.8 * gl));
         col += texture(tBloom, uv).rgb * uBloom;
         col *= uExposure;
         col *= 1.0 - uVignette * smoothstep(0.18, 0.78, r2);
@@ -214,14 +238,28 @@ export class Post {
   // Its first look comes 0.6 s after the first full frame, so a device that cannot
   // hold the start tier drops it inside the first second, not the first five;
   // after that it waits 1.5 s between steps.
+  //
+  // A one-off hitch is not a slow device. The first full frames upload the
+  // geometry (90-120 ms each on the test machine, longer with a host page drawing
+  // its own WebGL beside the frame), and when those fed the average it could still
+  // read 21 ms at the first look and drop occlusion from a page running a steady
+  // 60. So nothing is averaged until 30 full frames have been drawn, an interval
+  // counts for at most 50 ms (a device that really runs at 20 fps still reads as
+  // slow; one hitch can no longer carry the average), and a step needs the
+  // average over budget at two looks in a row.
   _govern(now) {
     const dt = this._last ? now - this._last : 0;
     this._last = now;
-    if (!(dt > 0 && dt < 250)) return;
-    this._ema = this._ema ? this._ema * 0.9 + dt * 0.1 : dt;
-    this._since = (this._since || 0) + dt;
-    if (this._since < (this._stepped ? 1500 : 600) || this._ema < 21) return;     // under ~48 fps
-    this._since = 0; this._stepped = true;
+    this._frames = (this._frames || 0) + 1;
+    if (this._frames <= 30 || !(dt > 0 && dt < 250)) return;
+    const d = Math.min(dt, 50);
+    this._ema = this._ema ? this._ema * 0.9 + d * 0.1 : d;
+    this._since = (this._since || 0) + d;
+    if (this._since < (this._stepped ? 1500 : 600)) return;
+    this._since = 0;
+    if (this._ema < 21) { this._over = 0; return; }       // under ~48 fps
+    if (++this._over < 2) return;
+    this._over = 0; this._stepped = true;
     if (this.aoActive) { this.aoEnabled = false; this.aoActive = false; this.quality = 'no-ao'; return; }
     const next = this.govScale > 0.9 ? 0.8 : this.govScale > 0.7 ? 0.65 : 0;
     if (next && this._size) { this.govScale = next; this.quality = 'scale-' + next; this.setSize(...this._size); }

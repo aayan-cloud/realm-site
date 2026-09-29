@@ -137,6 +137,9 @@ export function makeDust(count = 900, extent = 1.1) {
   });
   const points = new THREE.Points(geo, mat);
   points.frustumCulled = false;
+  // Retired: on a still frame a defocused mote in the black read as a smudge on
+  // the lens or a dead pixel, not as air, and a studio product shot has none.
+  points.visible = false;
   return { object: points, material: mat };
 }
 

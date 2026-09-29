@@ -17,10 +17,18 @@ import {
   poly, pathOf, circlePts, rectPts, fillet, stadiumPts, toothPts, merge, xf, hexPrism, flip, creased, taperTube,
   skinSolid, span, Tris,
 } from './geo.js';
-import { makeMaterials, VOIDS, NV } from './materials.js';
+import { makeMaterials, VOIDS, NV, detail } from './materials.js';
+
+// satin dark paint on the display stand's welded square tube: a fine orange peel
+const uber_stand = () => detail(new THREE.MeshStandardMaterial({ name: 'stand_paint', color: 0x1e2023, metalness: 0.2, roughness: 0.56, envMapIntensity: 0.7 }), 'cast', { cell: 0.0008, rough: 0.04, bump: 0.00003, speck: 0 });
 import { Capper } from './caps.js';
 
 export { roundedBox };
+
+// how far the display stand lifts the engine's lowest point off the floor (m)
+// 0 since 2026-09-29: the stand is off (its feet and posts ran into the page text and controls in
+// the framed sizes), so the engine sits on its sump on the floor again.
+export const STAND_DROP = 0;
 
 // Hex values below are sRGB. With colour management on they mean what they look like.
 THREE.ColorManagement.legacyMode = false;
@@ -154,7 +162,7 @@ class Parts {
 // function so it never self-intersects, laid out in ZY with the axis along X and
 // the nose pointing down (-Y) at zero rotation.
 export function camLobeGeometry(maxLift, durationDeg, baseR, width) {
-  const N = 128;
+  const N = 96;
   const shape = new THREE.Shape();
   for (let i = 0; i <= N; i++) {
     const a = (360 * i) / N;                                  // cam degrees, 0 = nose
@@ -339,7 +347,7 @@ export function buildEngine() {
     const s = poly(fillet(rectPts(-HL, -0.0745, HL, 0.0745), 0.002, 2), true);
     s.holes.push(pathOf(stadiumPts(CYL_X[3], CYL_X[0], 0, 0.0635, 24), true));
     shells.add('cast', extrudeY(s, 0.060, DECK - 0.010, 0.0015));
-    for (const sz of [1, -1]) shells.add('cast', skinSolid(span(-HL, HL, 64), JK_YS, jacketZ, 0.006, sz));
+    for (const sz of [1, -1]) shells.add('cast', skinSolid(span(-HL, HL, 44), JK_YS, jacketZ, 0.006, sz));
     // closed deck, machined, with the liners passing through it
     const d = poly(blockPlan, true);
     CYL_X.forEach(x => d.holes.push(pathOf(circlePts(x, 0, 0.0462, 48), true)));
@@ -411,13 +419,13 @@ export function buildEngine() {
     shells.add('cast', xf(roundedBox(0.082, 0.021, 0.008, 0.0025), px, py, pz + 0.0003));
     const SEG = { a: [0, 1, 1, 0], b: [1, 1, 1, 0.5], c: [1, 0.5, 1, 0], d: [0, 0, 1, 0], e: [0, 0.5, 0, 0], f: [0, 1, 0, 0.5], g: [0, 0.5, 1, 0.5] };
     const GLYPH = { A: 'abcefg', 0: 'abcdef', 2: 'abged', 1: 'bc', '-': 'g', F: 'aefg', S: 'afgcd' };
-    const W = 0.0052, H = 0.0104, T = 0.0015, text = 'A0021-FS';
+    const W = 0.0056, H = 0.0110, T = 0.0021, text = 'A0021-FS';
     [...text].forEach((ch, k) => {
       const cx = px - (text.length - 1) * 0.0045 + k * 0.0090 - W / 2, cy = py - H / 2;
       for (const s of GLYPH[ch]) {
         const [x0, y0, x1, y1] = SEG[s];
         const w = Math.abs(x1 - x0) * W + T, h = Math.abs(y1 - y0) * H + T;
-        shells.add('cast', xf(new THREE.BoxGeometry(w, h, 0.0016), cx + (x0 + x1) / 2 * W, cy + (y0 + y1) / 2 * H, pz + 0.0043));
+        shells.add('cast', xf(roundedBox(w, h, 0.0024, 0.0006, 1), cx + (x0 + x1) / 2 * W, cy + (y0 + y1) / 2 * H, pz + 0.0043));
       }
     });
   }
@@ -493,15 +501,18 @@ export function buildEngine() {
     shells.add('pan', extrudeY(lip, YP - 0.0035, YP + 0.0003, 0.0008));
     for (let x = -0.18; x <= 0.181; x += 0.06) for (const sz of [1, -1]) bolt(boltsClip, x, YP - 0.0035, sz * 0.102, [0, -1, 0], 0.9);
     for (const sx of [1, -1]) for (const z of [-0.05, 0.05]) bolt(boltsClip, sx * (HL - 0.0005), YP - 0.0035, z, [0, -1, 0], 0.9);
-    // swage beads pressed along both sides
+    // Pressed into both sides: a flat swage along the top, and a raised panel on
+    // the flank of the well, both with the soft shoulders a press die leaves, so
+    // they read as part of the sheet (a round bar along it read as a rod laid on
+    // the pan)
     for (const sz of [1, -1]) {
-      shells.add('pan', draft(rodSolid(curve([[HL - 0.018, -0.132, sz * 0.0985], [-HL + 0.018, -0.132, sz * 0.0985]]), 0.0024, 4, 10)));
-      shells.add('pan', draft(rodSolid(curve([[XW - 0.050, -0.172, sz * 0.0985], [-HL + 0.018, -0.172, sz * 0.0985]]), 0.0024, 4, 10)));
+      shells.add('pan', draft(xf(roundedBox(2 * HL - 0.040, 0.008, 0.005, 0.0022), 0, -0.1335, sz * 0.0968)));
+      shells.add('pan', draft(xf(roundedBox(0.112, 0.030, 0.006, 0.0027), -0.066, -0.1775, sz * 0.0967)));
     }
-    // drain plug on a welded boss low on the well, and a second on the floor
+    // drain plug in a welded boss low on the well, and a second on the floor
     const zs = y => 0.098 * (1 - 0.55 * (YP - y));
-    shells.add('pan', xf(disc(0.013, 0.004, 28, 0), -0.150, -0.188, zs(-0.188) - 0.001, Math.PI / 2, 0, 0));
-    bolt(boltsClip, -0.150, -0.188, zs(-0.188) + 0.003, [0, 0, 1], 1.6);
+    shells.add('pan', xf(lathe([[0, -0.002], [0.0135, -0.002], [0.0146, 0.0012], [0.0126, 0.0046], [0, 0.0046]], 32, { crease: 50 }), -0.150, -0.188, zs(-0.188) - 0.0015, Math.PI / 2, 0, 0));
+    bolt(boltsClip, -0.150, -0.188, zs(-0.188) + 0.0031, [0, 0, 1], 1.6);
     bolt(boltsClip, -0.15, -0.205, 0.03, [0, -1, 0], 1.6);
     // Oil pickup, visible through the cut: a two-bolt flange on the underside of
     // the centre main cap, the tube down into the sump well, the strainer on its
@@ -733,19 +744,35 @@ export function buildEngine() {
       [0.020, 0.056], [0.023, 0.052], [0.030, 0.040], [0.078, 0.040], [0.086, 0.032], [0.086, 0]];
     const prof = [...outR, ...outL, ...inner].map(([z, y]) => [z, H0 + y]);
     const L = BLOCK_L + 0.002;
-    shells.add('cover', extrudeX(poly(prof), L, 0.001));
+    // Painted outside, bare casting inside: cut open, the inside of the cover is
+    // raw alloy that catches the light from the open side, so it reads as the
+    // cavity over the cams. (Painted dark inside too, it was a band of black void
+    // between the camshaft and the cut outline.) One closed solid in two draws;
+    // the stencil count sums over both.
+    const inside = (c, n) => c.y > H0 + 0.002 && Math.abs(c.z) < 0.0868 && (n.y < -0.3 || (Math.abs(n.z) > 0.5 && n.z * c.z < 0 && Math.abs(c.z) > 0.084));
+    const [cOut, cIn] = splitTris(extrudeX(poly(prof), L, 0.001), inside);
+    shells.add('cover', cOut); shells.add('coverIn', cIn);
     const endPlate = poly([...outR, ...outL].map(([z, y]) => [z, H0 + y]));
     // the end plates stand 3 mm proud of the head at each end, edges rounded, so
     // the cover reads as a separate moulding sitting on the head
-    for (const sx of [1, -1]) shells.add('cover', xf(roundExtrudeX(endPlate, 0.007, 0.0022, 2), sx * (L / 2 + 0.0005), 0, 0));
-    for (const sz of [1, -1]) ribs.forEach(z => shells.add('machined', xf(new THREE.BoxGeometry(L - 0.02, 0.0008, 0.0022), 0, H0 + 0.0472, sz * z)));
+    for (const sx of [1, -1]) {
+      const [pOut, pIn] = splitTris(xf(roundExtrudeX(endPlate, 0.007, 0.0022, 2), sx * (L / 2 + 0.0005), 0, 0), (c, n) => n.x * sx < -0.5);
+      shells.add('cover', pOut); shells.add('coverIn', pIn);
+    }
+    // the fins' crests are machined through the paint to bright metal, rounded, so
+    // each catches the light as one clean line along the cover
+    for (const sz of [1, -1]) ribs.forEach(z => shells.add('lobe', rodSolid(curve([[-(L / 2 - 0.010), H0 + 0.0463, sz * z], [L / 2 - 0.010, H0 + 0.0463, sz * z]]), 0.00125, 2, 10)));
     for (const x of [-0.18, -0.108, -0.036, 0.036, 0.108, 0.18]) for (const sz of [1, -1]) bolt(boltsClip, x, H0 + 0.006, sz * 0.094, [0, 1, 0], 0.8);
     for (const sx of [1, -1]) bolt(boltsClip, sx * (HL - 0.010), H0 + 0.060, -0.012, [0, 1, 0], 0.8);
     // Oil filler: a boss moulded into the cover and a round black cap on it, 12 mm
     // tall with a ribbed grip and a bar across its crown. It comes off with the
     // accessories rather than being sawn through.
     const FX = HL - 0.060, FZ = 0.058, FY = H0 + 0.044;
-    shells.add('cover', lathe([[0, -0.002], [0.027, -0.002], [0.027, 0.002], [0.024, 0.006], [0, 0.006]], 40, { crease: 40 }).translate(FX, FY, FZ));
+    // (an open neck: a moulded collar round a dark hole, so with the cap off it
+    // reads as a way into the cover, not as a disc laid on it)
+    shells.add('cover', lathe([[0.0165, -0.002], [0.027, -0.002], [0.027, 0.002], [0.024, 0.006], [0.0165, 0.006]], 40, { crease: 40 }).translate(FX, FY, FZ));
+    shells.add('coverIn', lathe([[0.0148, -0.004], [0.0168, -0.004], [0.0168, 0.0058], [0.0148, 0.0058]], 32).translate(FX, FY, FZ));
+    shells.add('rubber', lathe([[0, -0.0015], [0.0149, -0.0015], [0.0149, 0.0004], [0, 0.0004]], 32).translate(FX, FY, FZ));
     A('filler', 'plastic', lathe([[0, 0.006], [0.0205, 0.006], [0.0215, 0.008], [0.0215, 0.0155], [0.0195, 0.018], [0.012, 0.0188], [0, 0.0190]], 48, { crease: 40 }).translate(FX, FY, FZ));
     for (let k = 0; k < 18; k++) {
       const a = (k / 18) * Math.PI * 2;
@@ -753,11 +780,42 @@ export function buildEngine() {
     }
     A('filler', 'plastic', xf(roundedBox(0.030, 0.0055, 0.0060, 0.0022), FX, FY + 0.0205, FZ));
     shells.add('cast', rodSolid(curve([[-HL + 0.05, H0 + 0.045, -0.058], [-HL + 0.05, H0 + 0.062, -0.060], [-HL + 0.03, H0 + 0.070, -0.060]]), 0.005, 16, 12));
-    // the Realm mark: a satin copper plate let into the spine between cylinders 2
-    // and 3, the ring-and-cross raised on it. Cut with the cover, not left floating.
-    shells.add('copper', xf(roundedBox(0.044, 0.0022, 0.026, 0.0008), 0, H0 + 0.0606, 0));
-    shells.add('copper', xf(new THREE.TorusGeometry(0.0080, 0.0010, 6, 40), 0, H0 + 0.0622, 0, Math.PI / 2, 0, 0));
-    shells.add('copper', xf(roundedBox(0.018, 0.0012, 0.0016, 0.0004), 0, H0 + 0.0620, 0), xf(roundedBox(0.0016, 0.0012, 0.018, 0.0004), 0, H0 + 0.0620, 0));
+    // The Realm plate, on the spine between cylinders 2 and 3, set to the exhaust
+    // side of the centreline so the cut leaves it whole: a cast plate with a dark,
+    // patinated field, and a polished copper rim, ring-and-cross and name standing
+    // up out of it, the way a cast name plate is finished. (A flat copper plate
+    // with the turning rings of a lathe on it read as wood grain.)
+    {
+      const BZ = -0.0094, BY = H0 + 0.0600, T = 0.0021;
+      shells.add('badge', xf(roundedBox(0.058, 0.0026, 0.0172, 0.0008), 0, BY + 0.0004, BZ));
+      for (const s of [-1, 1]) {
+        shells.add('copper', xf(roundedBox(0.0574, 0.0014, 0.0013, 0.0005), 0, BY + T, BZ + s * 0.0079));
+        shells.add('copper', xf(roundedBox(0.0013, 0.0014, 0.0171, 0.0005), s * 0.0281, BY + T, BZ));
+      }
+      shells.add('copper', xf(new THREE.TorusGeometry(0.0047, 0.00068, 6, 32), -0.0185, BY + T, BZ, Math.PI / 2, 0, 0));
+      shells.add('copper', xf(roundedBox(0.0120, 0.0012, 0.0011, 0.0004), -0.0185, BY + T, BZ), xf(roundedBox(0.0011, 0.0012, 0.0120, 0.0004), -0.0185, BY + T, BZ));
+      // R E A L M in block letters, 6.4 mm tall: strokes as (x0, z0, x1, z1) in a
+      // 1 x 1 cell, read from the exhaust side
+      const STROKE = {
+        R: [[0, 0, 0, 1], [0, 1, 0.8, 1], [0.8, 1, 0.8, 0.5], [0, 0.5, 0.8, 0.5], [0.3, 0.5, 0.9, 0]],
+        E: [[0, 0, 0, 1], [0, 1, 0.85, 1], [0, 0.5, 0.7, 0.5], [0, 0, 0.85, 0]],
+        A: [[0, 0, 0, 1], [0.85, 0, 0.85, 1], [0, 1, 0.85, 1], [0, 0.5, 0.85, 0.5]],
+        L: [[0, 0, 0, 1], [0, 0, 0.8, 0]],
+        M: [[0, 0, 0, 1], [1, 0, 1, 1], [0, 1, 0.5, 0.45], [0.5, 0.45, 1, 1]],
+      };
+      const GH = 0.0064, GW = 0.0044, gw = 0.0009;
+      [...'REALM'].forEach((ch, k) => {
+        const x0 = -0.0100 + k * 0.0072, z0 = BZ - GH / 2;
+        for (const [a, b, c, d] of STROKE[ch]) {
+          // seen from the intake side, where the page's cameras stand, the name runs
+          // left to right along +x with the tops of the letters away from the lens (-z)
+          const ax = x0 + a * GW, az = z0 + (1 - b) * GH, bx = x0 + c * GW, bz = z0 + (1 - d) * GH;
+          const len = Math.hypot(bx - ax, bz - az) + gw, ang = Math.atan2(bz - az, bx - ax);
+          shells.add('copper', xf(new THREE.BoxGeometry(len, 0.0010, gw), (ax + bx) / 2, BY + T - 0.0001, (az + bz) / 2, 0, -ang, 0));
+        }
+      });
+      for (const s of [-1, 1]) shells.add('copper', xf(lathe([[0, 0], [0.0011, 0], [0.0010, 0.0005], [0.0005, 0.0009], [0, 0.0010]], 12), s * 0.0247, BY + 0.0017, BZ));
+    }
   }
 
   // ================================================================ intake (+Z)
@@ -809,9 +867,32 @@ export function buildEngine() {
       // the closed end and the throttle end, where the throttle bore looks in
       const s1 = secAt(PX1);
       A('intake', 'castIn', xf(extrudeX(poly(s1.pts), 0.004, 0.0008), PX1 - 0.002, 0, 0));
+      // The plenum is cast in two halves and bolted along a parting flange at mid
+      // height on both flanks: a flat lip 3 mm proud, with a bolt boss every
+      // 70 mm. Stiffening ribs run up the outboard flank between the runners.
+      // (Two halves joined by a scribed line read as a plain tube.)
       for (const sz of [1, -1]) {
-        const s0 = secAt(PX0);
-        A('intake', 'castIn', rodSolid(curve([[PX0 + 0.004, (s0.top + s0.bot) / 2, PZ + sz * s0.w / 2], [(PX0 + PX1) / 2, (secAt((PX0 + PX1) / 2).top + PY - PH / 2) / 2, PZ + sz * secAt((PX0 + PX1) / 2).w / 2], [PX1 - 0.004, (s1.top + s1.bot) / 2, PZ + sz * s1.w / 2]]), 0.0016, 24, 8));
+        const Fl = new Tris(), SS = 14, R = [];
+        for (let i = 0; i <= SS; i++) {
+          const x = PX0 + 0.002 + (PX1 - PX0 - 0.004) * (i / SS), s = secAt(x), ym = (s.top + s.bot) / 2 - 0.004;
+          const zi = PZ + sz * (s.w / 2 - 0.002), zo = PZ + sz * (s.w / 2 + 0.0030);
+          R.push([[x, ym - 0.0024, zi], [x, ym - 0.0024, zo], [x, ym + 0.0024, zo], [x, ym + 0.0024, zi]]);
+        }
+        for (let i = 0; i < SS; i++) for (let k = 0; k < 4; k++) {
+          const a = R[i][k], b = R[i][(k + 1) % 4], c = R[i + 1][(k + 1) % 4], d = R[i + 1][k];
+          Fl.quad(a, b, c, d, [0, [-1, 0, 1, 0][k], [0, sz, 0, -sz][k]]);
+        }
+        for (const [ring, ox] of [[R[0], -1], [R[SS], 1]]) Fl.quad(ring[0], ring[1], ring[2], ring[3], [ox, 0, 0]);
+        A('intake', 'castIn', Fl.build(30));
+        for (let x = PX0 + 0.030; x < PX1 - 0.010; x += 0.070) {
+          const s = secAt(x), ym = (s.top + s.bot) / 2 - 0.004, zb = PZ + sz * (s.w / 2 + 0.0032);
+          A('intake', 'castIn', lathe([[0, -0.009], [0.0052, -0.009], [0.0056, -0.006], [0.0056, 0.006], [0.0052, 0.009], [0, 0.009]], 16, { crease: 40 }).translate(x, ym, zb));
+          accBolt('intake', x, ym + 0.009, zb, [0, 1, 0], 0.5);
+        }
+        if (sz > 0) for (const x of [-0.0965, 0, 0.0965]) {
+          const s = secAt(x), ym = (s.top + s.bot) / 2;
+          A('intake', 'castIn', xf(roundedBox(0.0055, (s.top - ym) - 0.010, 0.006, 0.0022), x, (s.top + ym) / 2 - 0.002, PZ + s.w / 2 - 0.0008));
+        }
       }
     }
     // bolted end cover, machined face, six screws
@@ -821,11 +902,15 @@ export function buildEngine() {
       const a = (k / 6) * Math.PI * 2 + Math.PI / 6, cy = (sE.top + sE.bot) / 2, hh = (sE.top - sE.bot) / 2;
       accBolt('intake', PX0 - 0.006, cy + Math.sin(a) * (hh - 0.006), PZ + Math.cos(a) * (sE.w / 2 - 0.006), [-1, 0, 0], 0.7);
     }
-    // two cast bosses on the top for the bracket that steadies the plenum, bolted
-    for (const x of [-0.150, 0.030]) {
+    // two cast bosses on the top, between the runners, each carrying a stay of flat
+    // bar that runs down over the inboard shoulder of the plenum to the side of the
+    // head and steadies the plenum on its runners
+    for (const x of [-0.0965, 0.0]) {
       const t = secAt(x).top;
       A('intake', 'castIn', xf(lathe([[0, -0.006], [0.0095, -0.006], [0.0095, 0.002], [0.0080, 0.0035], [0, 0.0035]], 24, { crease: 50 }), x, t, PZ - 0.016));
-      accBolt('intake', x, t + 0.0035, PZ - 0.016, [0, 1, 0], 0.75);
+      A('intake', 'darkSteel', xf(extrudeX(poly(fillet([[PZ - 0.004, t + 0.0035], [PZ - 0.004, t + 0.0065], [PZ - 0.031, t + 0.0065], [HW + 0.003, HEAD_TOP - 0.009], [HW + 0.003, HEAD_TOP - 0.028], [HW, HEAD_TOP - 0.028], [HW, HEAD_TOP - 0.010], [PZ - 0.032, t + 0.0035]], 0.0012, 2)), 0.014, 0.0005), x, 0, 0));
+      accBolt('intake', x, t + 0.0065, PZ - 0.016, [0, 1, 0], 0.75);
+      accBolt('intake', x, HEAD_TOP - 0.019, HW + 0.003, [0, 0, 1], 0.7);
     }
     // a pressure sensor on a boss on top, and the crankcase breather spigot
     const tS = secAt(-0.060).top - PH / 2 - PY, tB = secAt(0.080).top - PH / 2 - PY;
@@ -845,25 +930,50 @@ export function buildEngine() {
     tbS.holes.push(pathOf(circlePts(0, 0, 0.0318, 40)));
     A('intake', 'castIn', xf(extrudeX(tbS, tb1 - tb0 - 0.012, 0.0025), tbm + 0.004, PY, PZ));
     // the bore, machined bright, and a rolled bellmouth lip
-    A('intake', 'steel', atTB([[0.0300, tb0 - 0.003], [0.0317, tb0 - 0.003], [0.0317, tb1 + 0.012], [0.0300, tb1 + 0.012]], 56));
+    A('intake', 'bore', atTB([[0.0300, tb0 - 0.003], [0.0317, tb0 - 0.003], [0.0317, tb1 + 0.012], [0.0300, tb1 + 0.012]], 56));
     A('intake', 'castIn', atTB([[0.0305, tb1 - 0.004], [0.0368, tb1 - 0.004], [0.0368, tb1 + 0.010], [0.0392, tb1 + 0.016], [0.0395, tb1 + 0.020], [0.0372, tb1 + 0.022], [0.0340, tb1 + 0.019], [0.0305, tb1 + 0.012]], 56));
     [0, 1, 2, 3].forEach(k => { const a = Math.PI / 4 + (k * Math.PI) / 2; accBolt('intake', tb0 + 0.008, PY + Math.cos(a) * 0.040, PZ + Math.sin(a) * 0.040, [1, 0, 0], 0.7); });
     // butterfly on its spindle, two screws through the plate
     const bf = 12 * DEG;
-    A('intake', 'steel', xf(lathe([[0, -0.0008], [0.0296, -0.0008], [0.0300, 0], [0.0296, 0.0008], [0, 0.0008]], 48), tbm, PY, PZ, 0, 0, Math.PI / 2 - bf));
+    A('intake', 'brass', xf(lathe([[0, -0.0009], [0.0296, -0.0009], [0.0300, 0], [0.0296, 0.0009], [0, 0.0009]], 48), tbm, PY, PZ, 0, 0, Math.PI / 2 - bf));
     A('intake', 'steel', xf(disc(0.0034, 0.094, 14), tbm, PY, PZ, Math.PI / 2, 0, 0));
     for (const s of [-1, 1]) A('intake', 'bolt', xf(disc(0.0028, 0.0022, 10), tbm - Math.sin(bf) * 0.0012, PY + Math.cos(bf) * 0.0012, PZ + s * 0.012, 0, 0, -bf));
     // outboard: spring cup and return spring, quadrant with its cable groove, the
     // stop lever and the idle stop screw in its boss
     const QZ = PZ + 0.046;
     A('intake', 'castIn', xf(lathe([[0.004, -0.006], [0.013, -0.006], [0.013, 0.002], [0.004, 0.002]], 32), tbm, PY, PZ + 0.041, Math.PI / 2, 0, 0));
+    // a torsion return spring round the spindle, its tang hooked over a post on
+    // the body
     const helix = [];
-    for (let k = 0; k <= 60; k++) { const a = k / 60 * Math.PI * 2 * 2.5; helix.push(V3(tbm + Math.cos(a) * 0.0105, PY + Math.sin(a) * 0.0105, PZ + 0.0395 + k / 60 * 0.0045)); }
-    A('intake', 'darkSteel', new THREE.TubeGeometry(new THREE.CatmullRomCurve3(helix), 60, 0.0009, 5, false));
-    const qs = poly(fillet([[0, 0], ...circlePts(0, 0, 0.031, 20, -0.35, 1.95)], 0.003, 3));
-    qs.holes.push(pathOf(circlePts(0, 0, 0.0036, 12)));
-    A('intake', 'darkSteel', xf(extrudeZ(qs, 0.0032, 0.0006), tbm, PY, QZ));
-    A('intake', 'darkSteel', xf(lathe([[0.0275, -0.0012], [0.0300, -0.0012], [0.0300, 0.0012], [0.0275, 0.0012]], 40, { phiStart: 0.8, phiLength: 2.3 }), tbm, PY, QZ, Math.PI / 2, 0, 0));
+    for (let k = 0; k <= 72; k++) { const a = k / 72 * Math.PI * 2 * 3.5; helix.push(V3(tbm + Math.cos(a) * 0.0108, PY + Math.sin(a) * 0.0108, PZ + 0.0385 + k / 72 * 0.0060)); }
+    helix.push(V3(tbm + 0.0108 + 0.004, PY - 0.004, PZ + 0.0450), V3(tbm + 0.017, PY - 0.012, PZ + 0.0460));
+    A('intake', 'darkSteel', new THREE.TubeGeometry(new THREE.CatmullRomCurve3(helix), 90, 0.00125, 6, false));
+    A('intake', 'steel', xf(disc(0.0022, 0.008, 10), tbm + 0.017, PY - 0.013, PZ + 0.041, Math.PI / 2, 0, 0));
+    // the quadrant: a hub, a web with a lightening hole, and a deep-grooved arc the
+    // cable wraps, with the cable's nipple seated in a slot at its end
+    const A0 = -0.35, A1 = 1.95, QR = 0.031;
+    const web = poly(fillet([[0, 0], ...circlePts(0, 0, QR - 0.004, 18, A0, A1)], 0.003, 3));
+    web.holes.push(pathOf(circlePts(0, 0, 0.0036, 12)), pathOf(fillet([...circlePts(0, 0, 0.022, 10, A0 + 0.45, A1 - 0.45), ...circlePts(0, 0, 0.012, 6, A1 - 0.45, A0 + 0.45)], 0.002, 2)));
+    A('intake', 'darkSteel', xf(extrudeZ(web, 0.0025, 0.0005), tbm, PY, QZ));
+    A('intake', 'darkSteel', xf(lathe([[0.0036, -0.004], [0.0085, -0.004], [0.0085, 0.003], [0.0036, 0.003]], 24), tbm, PY, QZ, Math.PI / 2, 0, 0));
+    for (const dz of [-0.0026, 0.0026]) A('intake', 'darkSteel', xf(lathe([[QR - 0.0065, -0.0008], [QR, -0.0008], [QR, 0.0008], [QR - 0.0065, 0.0008]], 36, { phiStart: Math.PI / 2 - A1, phiLength: A1 - A0 }), tbm, PY, QZ + dz, Math.PI / 2, 0, 0));
+    A('intake', 'darkSteel', xf(lathe([[QR - 0.0065, -0.0019], [QR - 0.0032, -0.0019], [QR - 0.0032, 0.0019], [QR - 0.0065, 0.0019]], 36, { phiStart: Math.PI / 2 - A1, phiLength: A1 - A0 }), tbm, PY, QZ, Math.PI / 2, 0, 0));
+    A('intake', 'steel', xf(disc(0.0026, 0.0050, 12), tbm + Math.cos(A1) * (QR - 0.0038), PY + Math.sin(A1) * (QR - 0.0038), QZ, Math.PI / 2, 0, 0));
+    // the inner cable leaves the groove at A0 on its tangent to an adjuster in a
+    // bracket under the body; the outer cable runs on from it and is cut short
+    {
+      const P = V3(tbm + Math.cos(A0) * (QR - 0.0035), PY + Math.sin(A0) * (QR - 0.0035), QZ);
+      const T = V3(Math.sin(A0), -Math.cos(A0), 0);
+      const B = P.clone().addScaledVector(T, 0.034);
+      A('intake', 'steel', rodSolid(curve([P.toArray(), B.toArray()]), 0.0007, 2, 6));
+      const q = new THREE.Quaternion().setFromUnitVectors(V3(0, 1, 0), T);
+      A('intake', 'steel', lathe([[0, 0], [0.0026, 0], [0.0026, 0.016], [0, 0.016]], 12).applyQuaternion(q).translate(B.x, B.y, B.z));
+      for (const s of [0.004, 0.011]) { const n = B.clone().addScaledVector(T, s); A('intake', 'bolt', hexPrism(0.0042, 0.0028).applyQuaternion(q).translate(n.x, n.y, n.z)); }
+      const Bk = B.clone().addScaledVector(T, 0.0075);
+      A('intake', 'darkSteel', roundedBox(0.020, 0.0022, 0.016, 0.0006).applyQuaternion(q).translate(Bk.x, Bk.y, Bk.z - 0.004));
+      const C0 = B.clone().addScaledVector(T, 0.016), C1 = C0.clone().addScaledVector(T, 0.030), C2 = C1.clone().add(V3(-0.030, -0.010, 0.002));
+      A('intake', 'rubber', rodSolid(curve([C0.toArray(), C1.toArray(), C2.toArray()]), 0.0030, 16, 8));
+    }
     A('intake', 'steel', xf(roundedBox(0.026, 0.006, 0.0032, 0.0012), tbm + 0.010, PY - 0.010, QZ + 0.0035, 0, 0, -0.7));
     A('intake', 'castIn', xf(roundedBox(0.010, 0.010, 0.012, 0.0025), tbm + 0.026, PY - 0.036, PZ + 0.043));
     A('intake', 'bolt', xf(disc(0.0022, 0.016, 10), tbm + 0.026, PY - 0.029, PZ + 0.045));
@@ -889,8 +999,11 @@ export function buildEngine() {
     // so each primary carries that distance in uv.x and the shader does the rest
     // (materials.js, rhHeat): straw, gold, bronze, the blue band, then grey.
     const ex = [];
-    const tinted = (crv, rO, rI, glowLen = 0.12, s0 = 0, rs = 16, ts = 24) => {
-      const g = pipeSolid(crv, rO, rI, ts, rs);
+    // (the primaries and secondaries are open tubes: both ends are buried in the
+    // flange or a collector, and a part that is never cut need not be closed; the
+    // downpipe, whose end is seen, keeps its wall)
+    const tinted = (crv, rO, rI, glowLen = 0.12, s0 = 0, rs = 16, ts = 24, seed = 0.5, open = true) => {
+      const g = open ? new THREE.TubeGeometry(crv, ts, rO, rs, false) : pipeSolid(crv, rO, rI, ts, rs);
       const samp = crv.getSpacedPoints(120), len = crv.getLength();
       const p = g.attributes.position, uv = new Float32Array(p.count * 2), v = V3();
       for (let i = 0; i < p.count; i++) {
@@ -898,6 +1011,7 @@ export function buildEngine() {
         let best = 1e9, bi = 0;
         for (let k = 0; k < samp.length; k++) { const d = samp[k].distanceToSquared(v); if (d < best) { best = d; bi = k; } }
         uv[i * 2] = s0 + (bi / (samp.length - 1)) * len;
+        uv[i * 2 + 1] = seed;
       }
       g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
       return g;
@@ -914,13 +1028,13 @@ export function buildEngine() {
     CYL_X.forEach((x, i) => {
       const m = merges[i];
       const pts = [[x, Y0, Z0], [x, Y0, -0.122], [x * 0.92, Y0 - 0.030, -0.150], [x * 0.55 + m[0] * 0.45, 0.180, -0.168], [m[0] + Math.sign(x - m[0]) * 0.010, m[1] + 0.022, m[2]], [m[0], m[1], m[2]]];
-      ex.push(tinted(curve(pts), 0.0190, 0.0172));
+      ex.push(tinted(curve(pts), 0.0190, 0.0172, 0.12, 0, 16, 24, [0.15, 0.85, 0.45, 0.62][i]));
     });
     ex.push(tinted(curve([[0.020, 0.090, -0.175], [0.010, 0.040, -0.176], [-0.030, 0.000, -0.172], [-0.045, -0.020, -0.168]]), 0.0235, 0.0215, 0.12, 0.25));
     ex.push(tinted(curve([[-0.050, 0.105, -0.160], [-0.052, 0.050, -0.163], [-0.050, 0.000, -0.166], [-0.047, -0.025, -0.168]]), 0.0235, 0.0215, 0.12, 0.25));
     // the downpipe turns back along the sump and stops above its floor, so the
     // engine can stand on its sump
-    ex.push(tinted(curve([[-0.046, 0.010, -0.168], [-0.047, -0.040, -0.168], [-0.062, -0.108, -0.162], [-0.112, -0.140, -0.152], [-0.190, -0.150, -0.146]]), 0.0300, 0.0280, 0.12, 0.35, 28, 28));
+    ex.push(tinted(curve([[-0.046, 0.010, -0.168], [-0.047, -0.040, -0.168], [-0.062, -0.108, -0.162], [-0.112, -0.140, -0.152], [-0.190, -0.150, -0.146]]), 0.0300, 0.0280, 0.12, 0.35, 28, 28, 0.5, false));
     whole.add('exhaust', ...ex);
     // heat shield bracket stays dull; no shield, so the header shows
   }
@@ -1160,6 +1274,88 @@ export function buildEngine() {
     A('dip', 'steel', rodSolid(dip, 0.0042, 40, 12));
     A('dip', 'handle', xf(new THREE.TorusGeometry(0.012, 0.0032, 10, 36), -0.196, DECK + 0.114, 0.112));
     A('dip', 'handle', xf(disc(0.0065, 0.010, 20), -0.196, DECK + 0.100, 0.112));
+    // the dipstick tube is held to the block by a strap and bolt halfway up
+    {
+      const p = dip.getPointAt(0.55), wz = jacketZ(-0.196, p.y);
+      A('dip', 'darkSteel', xf(new THREE.TorusGeometry(0.0058, 0.0012, 6, 20), p.x, p.y, p.z, Math.PI / 2, 0, 0));
+      A('dip', 'darkSteel', xf(roundedBox(0.009, 0.0018, p.z - wz - 0.004, 0.0006), p.x, p.y, (p.z + wz) / 2 - 0.002));
+      accBolt('dip', p.x, p.y + 0.0009, wz + 0.004, [0, 0, 1], 0.55);
+    }
+
+    // A strap of flat bar in the plane (z, y), `w` wide along X: the polyline
+    // offset half the thickness each way and extruded
+    const strap = (pts, t, w, x) => {
+      const L = pts.map(([z, y], i) => {
+        const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+        const dz = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dz, dy);
+        return [z - (dy / l) * t / 2, y + (dz / l) * t / 2, z + (dy / l) * t / 2, y - (dz / l) * t / 2];
+      });
+      return xf(extrudeX(poly([...L.map(q => [q[0], q[1]]), ...L.map(q => [q[2], q[3]]).reverse()]), w, 0.0005), x, 0, 0);
+    };
+
+    // The engine harness on the intake side: a corrugated loom along the top of
+    // the block under the manifold flange, held off the jacket by three P-clips
+    // bolted to it, with a branch down to the knock sensor's lead and one forward
+    // to the alternator's regulator plug. Bolted on, so it comes off with the
+    // accessories.
+    {
+      const LY = 0.197, LZ = 0.0935;
+      const trunk = curve([[-0.186, LY + 0.012, LZ - 0.004], [-0.160, LY, LZ], [0.060, LY, LZ], [0.112, LY - 0.002, LZ + 0.002]]);
+      A('harness', 'rubber', rodSolid(trunk, 0.0046, 48, 10));
+      A('harness', 'rubber', rodSolid(curve([[0.112, LY - 0.002, LZ + 0.002], [0.132, LY - 0.012, LZ + 0.012], [0.146, 0.165, 0.121], [0.151, 0.150, 0.125]]), 0.0034, 16, 8));
+      A('harness', 'plastic', xf(roundedBox(0.012, 0.016, 0.012, 0.002), 0.152, 0.146, 0.127));
+      A('harness', 'rubber', rodSolid(curve([[-0.030, LY, LZ], [-0.024, LY - 0.030, LZ + 0.002], [-0.016, 0.140, 0.0905], [-0.012, 0.130, 0.0885]]), 0.0026, 16, 8));
+      A('harness', 'plastic', xf(roundedBox(0.010, 0.012, 0.010, 0.002), -0.012, 0.128, 0.0875));
+      // corrugation: raised rings every 9 mm along the trunk
+      for (let u = 0.03; u < 0.98; u += 0.021) {
+        const p = trunk.getPointAt(u), q = new THREE.Quaternion().setFromUnitVectors(V3(0, 1, 0), trunk.getTangentAt(u));
+        A('harness', 'rubber', annulus(0.0044, 0.0051, 0.0026, 12).applyQuaternion(q).translate(p.x, p.y, p.z));
+      }
+      for (const x of [-0.140, -0.045, 0.050]) {
+        const wz = jacketZ(x, LY);
+        A('harness', 'darkSteel', xf(new THREE.TorusGeometry(0.0056, 0.0011, 6, 18), x, LY, LZ, 0, Math.PI / 2, 0));
+        A('harness', 'darkSteel', strap([[LZ - 0.0052, LY + 0.004], [LZ - 0.006, LY + 0.001], [wz + 0.002, LY - 0.006]], 0.0013, 0.009, x));
+        accBolt('harness', x, LY - 0.0065, wz + 0.0035, [0, 0, 1], 0.5);
+      }
+    }
+
+    // Coolant: the thermostat housing on the flywheel end of the head, intake side,
+    // with the outlet hose and the heater hose cut short where the engine came out
+    // of the car, each on a spigot with a worm clamp; and the water pump's inlet
+    // hose stub at the front, on the exhaust side. The cut ends show the hose wall.
+    {
+      const TX = -HL, TY = DECK + 0.034, TZ = 0.066;
+      A('coolant', 'castIn', xf(roundedBox(0.005, 0.046, 0.040, 0.0015), TX - 0.0022, TY, TZ));
+      A('coolant', 'castIn', xf(roundedBox(0.020, 0.036, 0.030, 0.006), TX - 0.012, TY, TZ));
+      for (const s of [-1, 1]) accBolt('coolant', TX - 0.0046, TY + s * 0.018, TZ + s * 0.013, [-1, 0, 0], 0.6);
+      const hose = (pts, rO, rI) => {
+        const c = curve(pts);
+        A('coolant', 'rubber', pipeSolid(c, rO, rI, 24, 20));
+        // worm clamp: band, and the screw housing on it
+        const p = c.getPointAt(0.10), q = new THREE.Quaternion().setFromUnitVectors(V3(0, 1, 0), c.getTangentAt(0.10));
+        A('coolant', 'steel', annulus(rO - 0.0004, rO + 0.0009, 0.009, 28).applyQuaternion(q).translate(p.x, p.y, p.z));
+        const side = V3(0, 0, 1).applyQuaternion(q).multiplyScalar(rO + 0.0025).add(p);
+        A('coolant', 'steel', roundedBox(0.010, 0.008, 0.005, 0.0012).applyQuaternion(q).translate(side.x, side.y, side.z));
+        return c;
+      };
+      // spigots: a turned tube with a bead the hose is pushed over
+      const spigot = (at, dir, r, len) => {
+        const q = new THREE.Quaternion().setFromUnitVectors(V3(0, 1, 0), V3(...dir).normalize());
+        A('coolant', 'castIn', lathe([[r - 0.003, 0], [r, 0], [r, len - 0.004], [r + 0.0012, len - 0.002], [r, len], [r - 0.003, len]], 24, { crease: 40 }).applyQuaternion(q).translate(...at));
+      };
+      // (the outlet turns up, and both hoses stay inside the flywheel's plane, so
+      // the engine's bounds, and so the page's framing, are what they were)
+      spigot([TX - 0.012, TY + 0.016, TZ], [-0.15, 1, 0], 0.0125, 0.014);
+      hose([[TX - 0.013, TY + 0.026, TZ], [TX - 0.014, TY + 0.048, TZ + 0.006], [TX - 0.015, TY + 0.068, TZ + 0.018]], 0.0155, 0.0118);
+      spigot([TX - 0.012, TY - 0.010, TZ + 0.015], [0, -0.3, 1], 0.0085, 0.013);
+      hose([[TX - 0.012, TY - 0.014, TZ + 0.024], [TX - 0.013, TY - 0.022, TZ + 0.040], [TX - 0.016, TY - 0.034, TZ + 0.052]], 0.0110, 0.0080);
+      // the water pump's inlet: a cast elbow off the pump body under the timing
+      // cover's edge, and a stub of the lower radiator hose
+      const [pz0, py0] = aPump.c;
+      spigot([HL + 0.012, py0 - 0.045, pz0 - 0.064], [0, -0.35, -1], 0.0145, 0.020);
+      A('coolant', 'castIn', xf(roundedBox(0.022, 0.034, 0.030, 0.006), HL + 0.012, py0 - 0.042, pz0 - 0.058));
+      hose([[HL + 0.012, py0 - 0.052, pz0 - 0.080], [HL + 0.013, py0 - 0.062, pz0 - 0.098], [HL + 0.010, py0 - 0.082, pz0 - 0.112]], 0.0175, 0.0138);
+    }
 
     // water pump: the pulley on a cast snout through the timing cover, four bolts
     // on its face, turning with the belt
@@ -1231,7 +1427,7 @@ export function buildEngine() {
   {
     const cp = new Parts();
     // one web, split into its forged faces and the turned rim of its counterweight
-    const [webF, webT] = splitTris(roundExtrudeX(webShape(), 0.022, 0.0028, 3), (c, n) => {
+    const [webF, webT] = splitTris(roundExtrudeX(webShape(), 0.022, 0.0028, 2), (c, n) => {
       const r = Math.hypot(c.y, c.z), a = Math.atan2(c.y, c.z);
       return Math.abs(n.x) < 0.35 && r > WEB_RC - 0.004 && Math.abs(a + Math.PI / 2) < WEB_SPAN - 0.02;
     });
@@ -1338,6 +1534,20 @@ export function buildEngine() {
       whole.add('cast', xf(extrudeX(poly(fillet(capPts, 0.002, 2)), 0.022, 0.0012), x, CAM_Y + 0.0003, sz * CAM_Z));
       for (const s of [-1, 1]) bolt(boltsMech, x, CAM_Y + 0.018, sz * CAM_Z + s * 0.0185, [0, 1, 0], 0.85);
     });
+    // The intake camshaft stands in front of the final cut, and with the head's
+    // saddles sawn away its caps were bolted to air. A cutaway maker leaves the
+    // bearing webs standing: at every journal the lower half-saddle is kept, on a
+    // strip of the cam carrier sawn round on three sides back to the section, the
+    // saw cuts painted like the rest of the section. So the shaft is carried, and
+    // seen from above it sits on five pillars of the head.
+    MAIN_X.forEach(x => {
+      const cz = CAM_Z;
+      const sad = [[cz - 0.023, DECK + 0.0985], [cz + 0.023, DECK + 0.0985], [cz + 0.023, CAM_Y], ...circlePts(cz, CAM_Y, 0.0142, 16, 0, -Math.PI), [cz - 0.023, CAM_Y]];
+      whole.add('cast', xf(extrudeX(poly(fillet(sad, 0.002, 2)), 0.021, 0.0012), x, 0, 0));
+      const strip = xf(new THREE.BoxGeometry(0.024, 0.022, cz + 0.023 + 0.0015), x, DECK + 0.089, (cz + 0.023 - 0.0015) / 2);
+      const [raw, sawn] = splitTris(strip, (c, n) => Math.abs(n.x) > 0.5 || n.z > 0.5);
+      whole.add('cast', raw); whole.add('paint', sawn);
+    });
   }
 
   // ================================================================ spark plugs and coils
@@ -1384,8 +1594,8 @@ export function buildEngine() {
     const prof = [[0, TOP - 0.002], [0.0405, TOP - 0.002], [0.0405, TOP], [0.04295, 0.0292], [0.04295, 0.0248], [0.0395, 0.0248], [0.0395, 0.0236],
       [0.04295, 0.0236], [0.04295, 0.0186], [0.0395, 0.0186], [0.0395, 0.0174], [0.04295, 0.0174], [0.04295, 0.0126],
       [0.0390, 0.0126], [0.0390, 0.0101], [0.04295, 0.0101], [0.04295, 0.006], [0.036, 0.006], [0.036, 0.024], [0, 0.024]];
-    const crown = lathe(prof, 56);
-    const NR = 14, NA = 48, RC = 0.0405, pos = [], idx = [];
+    const crown = lathe(prof, 44);
+    const NR = 10, NA = 44, RC = 0.0405, pos = [], idx = [];
     const reliefs = [];
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) reliefs.push([sx * VALVE_DX, sz * SEAT_Z, sz > 0 ? 0.0178 : 0.0154]);
     const sm = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -1491,11 +1701,11 @@ export function buildEngine() {
     const prof = [[0, 0], [rHead, 0], [rHead, 0.0014], [rHead - 0.0016, 0.0034], [rHead * 0.62, 0.0068], [0.0055, 0.0110], [0.0032, 0.0170],
       [0.00275, 0.024], [0.00275, 0.093], [0.0022, 0.0935], [0.0022, 0.0956], [0.00275, 0.0961], [0.00275, 0.1010], [0.0024, S_TIP], [0, S_TIP]];
     // stem and head colours are the valve material's, split in the shader at 10 mm
-    return lathe(prof, 20, { crease: 40 });
+    return lathe(prof, 16, { crease: 40 });
   };
   const springGeo = (() => {
     const pts = [], turns = 6.5, wire = 0.0019, Rm = 0.0110;
-    const N = Math.round(turns * 11);
+    const N = Math.round(turns * 8);
     for (let k = 0; k <= N; k++) {
       const n = (k / N) * turns;
       const sm = t => t * t * (3 - 2 * t);
@@ -1509,7 +1719,7 @@ export function buildEngine() {
     return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), N, wire, 4, false);
   })();
   const retGeo = merge([
-    lathe([[0.0040, S_SPRING + SPRING_H], [0.0125, S_SPRING + SPRING_H], [0.0125, S_SPRING + SPRING_H + 0.0015], [0.0080, S_SPRING + SPRING_H + 0.0042], [0.0040, S_SPRING + SPRING_H + 0.0042]], 20),
+    lathe([[0.0040, S_SPRING + SPRING_H], [0.0125, S_SPRING + SPRING_H], [0.0125, S_SPRING + SPRING_H + 0.0015], [0.0080, S_SPRING + SPRING_H + 0.0042], [0.0040, S_SPRING + SPRING_H + 0.0042]], 14),
     lathe([[0.0023, S_SPRING + SPRING_H + 0.0012], [0.0046, S_SPRING + SPRING_H + 0.0012], [0.0038, S_SPRING + SPRING_H + 0.0068], [0.0023, S_SPRING + SPRING_H + 0.0068]], 12),
   ]);
   const bucketGeo = r => lathe([[0, S_BUCKET], [r - 0.0006, S_BUCKET], [r, S_BUCKET - 0.0006], [r, S_BUCKET - 0.024], [r - 0.0013, S_BUCKET - 0.024], [r - 0.0013, S_TIP], [0, S_TIP]], 28);
@@ -1534,7 +1744,7 @@ export function buildEngine() {
 
   // ================================================================ bolts
   const boltGeo = merge([
-    hexPrism(0.0058, 0.0055, 0.0009),
+    hexPrism(0.0058, 0.0055, 0.0009, true),
     xf(new THREE.CylinderGeometry(0.0078, 0.0078, 0.0009, 12), 0, 0.00045, 0),
   ]);
   const boltMesh = (list, mat, name) => {
@@ -1590,20 +1800,20 @@ export function buildEngine() {
   // line where the skin meets the cut.
   for (const m of clipMats) { m.alphaToCoverage = true; if (m.userData.rh) m.userData.rh.uRhEdge.value = 0.85; }
 
-  // Accessory groups. Their materials are see-through capable (one more program,
-  // shared by all of them) so each group can fade as it is taken off.
+  // Accessory groups (see setSection). Their materials are their own, so the belt
+  // in the front group can run at the damper's speed.
   const accGroups = [];
   for (const [name, { parts, bolts }] of acc) {
     const g = new THREE.Group(); g.name = 'acc_' + name;
     statics.add(g);
     const mats = makeMaterials();
-    for (const [k, m] of Object.entries(mats)) if (k !== 'flame') { m.transparent = true; m.depthWrite = true; m.clippingPlanes = [PARKED]; }
+    for (const [k, m] of Object.entries(mats)) if (k !== 'flame') m.clippingPlanes = [PARKED];
     if (bolts.length) parts.add('bolt', ...bolts.map(b => boltGeo.clone().applyMatrix4(new THREE.Matrix4().compose(b.p, new THREE.Quaternion().setFromUnitVectors(V3(0, 1, 0), b.d), V3(b.s, b.s, b.s)))));
     parts.build(g, mats);
     for (const [gn, P, sp, spName] of accSpin) if (gn === name) sp.build(spinner(g, P, spName), mats);
     g.updateMatrixWorld(true);
     const bb = new THREE.Box3().setFromObject(g);
-    accGroups.push({ name, g, mats: Object.values(mats), bb, d0: null, op: 1 });
+    accGroups.push({ name, g, mats: Object.values(mats), bb, on: true });
   }
   // A weak fill from the open side of the cut, off while the casting is closed.
   // The interior of a sectioned block sits in the key light's shadow and the
@@ -1615,14 +1825,65 @@ export function buildEngine() {
   root.add(fillIn);
 
   const box = new THREE.Box3().setFromObject(statics);
+
+  // ================================================================ display stand
+  // A museum engine is displayed, not set down: it stands on a welded stand of
+  // square tube in satin dark paint, a frame on four levelling feet and a post at
+  // each corner of the sump rail with a pad bolted up under it, which lifts the
+  // sump STAND_DROP clear of the floor. (Resting on its oil pan, the engine read
+  // as put down rather than shown.) It is not part of the engine: it joins the
+  // scene beside it (setSection), so the page's framing and bounds are the
+  // engine's own; stage.js lays the floor STAND_DROP lower to meet its feet.
+  // The stand is sectioned with the engine, as a cutaway is sawn on its stand:
+  // the posts on the cut side go with the half of the sump rail they held, and the
+  // cross members show their painted cut ends. (Left whole, the front posts held
+  // their pads up under a rail that had been cut away.)
+  const stand = new THREE.Group(); stand.name = 'stand';
+  const standMat = uber_stand();
+  {
+    const yF = new THREE.Box3().setFromObject(root).min.y - STAND_DROP;
+    const st = new Parts(), PX = HL - 0.012, RZ = 0.122, FT = 0.012, TB = 0.030;
+    const yT = yF + FT + TB, yP = -0.116 - 0.0035 - 0.006;
+    // an H: a cross member under each end and one spine between them, set back
+    // behind the cut, so the saw crosses only the cross members and the two front
+    // posts, not a rail the length of the engine
+    // Square tube with a 2.5 mm wall and welded end caps, so where the saw crosses
+    // a member the section shows a thin painted square round a hollow (cut solid,
+    // a tube read as a block of paint on the floor)
+    const sqTube = (len, w) => {
+      const out = poly(fillet(rectPts(-w / 2, -w / 2, w / 2, w / 2), 0.003, 2));
+      const ring = poly(fillet(rectPts(-w / 2, -w / 2, w / 2, w / 2), 0.003, 2));
+      ring.holes.push(pathOf(fillet(rectPts(-w / 2 + 0.0025, -w / 2 + 0.0025, w / 2 - 0.0025, w / 2 - 0.0025), 0.0012, 2)));
+      return merge([extrudeX(ring, len - 0.004), ...[-1, 1].map(s => xf(extrudeX(out, 0.002), s * (len / 2 - 0.001), 0, 0))]);
+    };
+    for (const s of [-1, 1]) st.add('stand', xf(sqTube(2 * RZ + TB, TB), s * 0.232, yF + FT + TB / 2, 0, 0, Math.PI / 2, 0));
+    st.add('stand', xf(sqTube(0.464 - TB + 0.002, TB), 0, yF + FT + TB / 2, -0.030));
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      // the post, its welded foot plate, and the pad that reaches in under the rail
+      st.add('stand', xf(sqTube(yP - yT + 0.002, 0.026), sx * PX, (yT + yP) / 2, sz * RZ, 0, 0, Math.PI / 2));
+      st.add('stand', xf(roundedBox(0.040, 0.004, 0.040, 0.0012), sx * PX, yT + 0.002, sz * RZ));
+      st.add('stand', xf(roundedBox(0.044, 0.006, 0.046, 0.0015), sx * PX, yP + 0.003, sz * (RZ - 0.012)));
+      for (const dx of [-0.012, 0.012]) st.add('bolt', boltGeo.clone().applyMatrix4(new THREE.Matrix4().compose(V3(sx * PX + dx, yP, sz * (RZ - 0.016)), new THREE.Quaternion().setFromUnitVectors(V3(0, 1, 0), V3(0, -1, 0)), V3(0.8, 0.8, 0.8))));
+      // levelling foot: a rubber pad on the floor, the threaded stud and lock nut
+      const fx = sx * 0.232, fz = sz * RZ;
+      st.add('rubber', xf(lathe([[0, 0], [0.016, 0], [0.017, 0.002], [0.016, 0.005], [0, 0.005]], 28, { crease: 50 }), fx, yF, fz));
+      st.add('steel', xf(disc(0.0055, FT, 14, 0), fx, yF + 0.004, fz));
+      st.add('bolt', xf(hexPrism(0.009, 0.005, 0), fx, yF + FT - 0.004, fz));
+    }
+    standMat.alphaToCoverage = true;
+    standMat.userData.rh.uRhEdge.value = 0.85;
+    st.build(stand, { stand: standMat, rubber: C.rubber, steel: C.steel, bolt: C.bolt }, m => { if (m.material === standMat) capper.add(m); });
+    stand.traverse(o => { if (o.isMesh && !o.userData.helper) { o.castShadow = true; o.receiveShadow = true; } });
+  }
   const E = {
     root, materials: M, shellMaterials: C, units, crank, statics, cams, lobes, valves, VT, capper,
     // cutMats are cut by the section; clipMats also holds the accessories, which the
     // section takes away rather than cuts (the page frames a sectioned chapter on
     // what is left, so it needs to know both)
-    cutMats: [...clipMats], clipMats: [...clipMats, ...accGroups.flatMap(a => a.mats)], beltT, sLoop, tLoop, accGroups, spinners, fillIn,
+    cutMats: [...new Set([...clipMats, standMat, C.rubber, C.steel, C.bolt])], clipMats: [...clipMats, ...accGroups.flatMap(a => a.mats)], beltT, sLoop, tLoop, accGroups, spinners, fillIn,
     CYL_X, MAIN_X, DECK, PITCH, CAM_Y, CAM_Z, HL,
     capCentre: box.getCenter(new THREE.Vector3()),
+    stand,
     innerParts: [...units.flatMap(u => [u.piston, u.rod]), ...Object.values(VT).filter(o => o && o.isInstancedMesh), cams.intake, cams.exhaust, beltT],
     _inner: null,
     valveX: valves.map(v => v.x),
@@ -1646,6 +1907,7 @@ export function setSection(E, openness, plane) {
   const on = openness > 0.001;
   const host = E.root.parent;
   if (host && E.capper.cap.parent !== host) host.add(E.capper.cap);
+  // the display stand is built but not shown (see STAND_DROP)
   E.capper.setPlane(plane);
   if (on !== E._secOn || plane !== E._plane) {
     E._secOn = on; E._plane = plane;
@@ -1659,23 +1921,20 @@ export function setSection(E, openness, plane) {
 
   // How far the plane has gone into the engine (m); negative while it is clear.
   const depth = on ? -minDist(plane, CORE) : -1;
-  // Accessories come off as the cut begins, the way a museum cutaway is stripped
-  // before it is sawn: each fades and draws away from the block over the first
-  // quarter of the first cut, the ones that stand furthest out first, so they are
-  // gone before the plane is into the walls and never hang as ghosts over the
-  // section paint. The state depends only on where the plane is, so a jump
-  // straight to a chapter or a scroll back agrees with a slow sweep.
-  const u = plane.normal.z < -0.999 ? sweepOf(plane.constant) : (depth > 0 ? 1 : 0);
+  // Accessories are never sawn (a sectioned alternator or filter can reads as a
+  // flat sticker), and never faded (faded, they hung over the block for a moment as
+  // translucent ghosts: an X-ray, not a strip-down). Each is simply gone, whole,
+  // the moment the saw reaches the front of it, so the change is hidden in the
+  // sweep of the plane: the manifold, alternator, filter and starter stand
+  // furthest out and go with the first frame of the cut, the harness, hoses and
+  // dipstick as the plane reaches the block, the coils last. This is the page's
+  // own rule for framing (a group is on while the plane has not reached it), and
+  // it depends only on where the plane is, so a jump straight to a chapter or a
+  // scroll back agrees with a slow sweep.
+  const reach = plane.normal.z < -0.999 ? plane.constant : (depth > 0 ? -Infinity : Infinity);
   for (const a of E.accGroups) {
-    const lag = Math.min(0.08, Math.max(0, 0.2 - a.bb.max.z));
-    const op = 1 - smoothstep(lag, 0.25 + lag, u);
-    if (op !== a.op) {
-      a.op = op;
-      for (const m of a.mats) m.opacity = op;
-      a.g.visible = op > 0.01;
-      a.g.position.copy(plane.normal).multiplyScalar(-(1 - op) * 0.06);
-      a.g.traverse(o => { if (o.isMesh) o.castShadow = op > 0.6; });
-    }
+    const on = reach >= a.bb.max.z;
+    if (on !== a.on) { a.on = on; a.g.visible = on; }
   }
   // While the casting is closed nothing inside it can be seen: the pistons, rods,
   // valvetrain, camshafts and timing belt are sealed in by the block, the head,

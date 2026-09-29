@@ -13,7 +13,7 @@ import {
   imep, setCompressionRatio, peakTorque, peakPower, FIRE_ANGLE, TDC_Y,
 } from './sim.js';
 import { buildEngine, updateEngine, setSection, intakeLift, exhaustLift } from './engine.js';
-import { Post } from './post.js';
+import { Post, installToneMap } from './post.js';
 import { makeEmbers, makeDust, makeShaft, makeGlow } from './atmos.js';
 import { makeFloor } from './stage.js';
 
@@ -44,7 +44,9 @@ const dpr = () => {
 };
 renderer.setPixelRatio(dpr());
 renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
+// ACES with an opened shoulder, so a glint on ground steel can clip (post.js)
+installToneMap();
+renderer.toneMapping = THREE.CustomToneMapping;
 renderer.toneMappingExposure = 0.95;
 renderer.localClippingEnabled = true;
 renderer.shadowMap.enabled = true;
@@ -121,7 +123,24 @@ function studioEnvironment(r) {
   // pulley rims catch them as crisp white lines, the glints a photograph of
   // machined steel clips on. Too small to add to the light on anything matte.
   panel(0.16, 3.6, 2.4, 3.4, -0.6, 14.0, 0xffffff, 0.2);
-  panel(3.4, 0.12, -0.8, 4.2, 2.2, 12.0, 0xffffff, 0.2);
+  // (The long strips run along the crank. Nearly every turned part on this engine
+  // turns about X, and a part turned about X mirrors, along its whole length, a
+  // ring of directions whose X is set by where the lens stands; a strip that long
+  // crosses that ring from every chapter's station, so a journal, a fin crest, a
+  // pulley rim or the fuel rail carries one clean line, high on it and low.)
+  // (wide enough, 5-6 degrees, to survive the blur a ground finish's highlight
+  // lobe puts on them: a strip a degree wide was averaged down to grey on
+  // anything but a mirror)
+  panel(7.0, 0.45, 0, 4.2, 2.2, 6.5, 0xffffff, 0.15);
+  panel(7.0, 0.32, 0, 1.7, 4.6, 4.0, 0xffffff, 0.15);
+  // a long, low band on the camera side just above the horizon: an upright turned
+  // part (a tappet bucket, a piston, a liner) sees the horizon in its flank, and
+  // in a dark room that flank was black
+  panel(9.0, 0.9, 0.4, 0.75, 4.9, 0.55, 0xf2f2f2, 0.5);
+  // ...and the lit floor in front of the engine, which an upright part seen from
+  // above reflects in its flank (a vertical cylinder mirrors the ground as far
+  // below the horizon as the lens is above it)
+  panel(5.0, 2.4, 0.3, -0.9, 3.2, 0.32, 0xeeeeee, 0.6);
   // warm strip, rear left: only just warm. A saturated one put copper on every
   // alloy face turned away from the key (manifold runners, barrel flanks).
   panel(0.5, 3.2, -4.4, 1.6, -2.0, 2.6, 0xffeee0);
@@ -130,6 +149,10 @@ function studioEnvironment(r) {
   // floor bounce, kept low: brighter, every face turned down (the skirts, the sump
   // flanks) mirrored it and read as pale plaster beside the same casting facing out
   panel(6.0, 6.0, 0, -0.95, 0, 0.05);
+  // the pool of light the key throws on the floor right under the engine: the
+  // intake tappet buckets lean toward the lens, so their flanks mirror the floor
+  // at their feet, and with nothing there they read as black
+  panel(1.6, 1.6, 0, -0.9, 0.9, 0.22, 0xf0f0f0, 0.8);
   panel(3.2, 2.0, -3.4, 0.9, 3.2, 0.8);                 // low front-left card: the intake faces reflect it
   panel(4.0, 1.2, 0.0, 4.9, -1.0, 1.2);                 // high rear strip: a top edge light on the metal
   const pm = new THREE.PMREMGenerator(r);
@@ -1431,7 +1454,8 @@ function frame(now) {
   const phiB = wrap720(eng.crank - FIRE_ANGLE[best]);
   const since = ((phiB - SPEC.spark) % 720 + 720) % 720;
   const win = SPEC.burnTail + SPEC.sparkBTDC;
-  const burning = since < win ? Math.pow(Math.sin(Math.PI * (since / win)), 0.6) : 0;
+  // on overrun the injectors are off (eng.load 0, the readout says fuel cut): nothing burns, so no flash
+  const burning = eng.load > 0 && since < win ? Math.pow(Math.sin(Math.PI * (since / win)), 0.6) : 0;
   fire.position.set(E.CYL_X[best], E.DECK + 0.012, 0);
   // the light is inside the chamber: it only reaches the room once the casting is cut
   fire.intensity = (0.25 + 2.6 * burning) * (0.35 + 0.65 * heat) * eng.firing * (0.08 + 0.92 * Math.min(1, section / 0.5));
