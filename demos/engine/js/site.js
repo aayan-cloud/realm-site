@@ -8,13 +8,14 @@
 import * as THREE from 'three';
 import { OrbitControls } from '../vendor/OrbitControls.js';
 import {
-  SPEC, Engine, clamp, wrap720, wristHeight, wristVelocity, intakeLiftAt, exhaustLiftAt,
+  SPEC, Engine, clamp, wrap720, wristHeight, wristVelocity,
   cylinderPressure, torqueAt, powerAt, bsfc, airFuelRatio, volumetricEfficiency,
   imep, setCompressionRatio, peakTorque, peakPower, FIRE_ANGLE, TDC_Y,
 } from './sim.js';
-import { buildEngine, updateEngine, setSection } from './engine.js';
+import { buildEngine, updateEngine, setSection, intakeLift, exhaustLift } from './engine.js';
 import { Post } from './post.js';
 import { makeEmbers, makeDust, makeShaft, makeGlow } from './atmos.js';
+import { makeFloor } from './stage.js';
 
 const $ = s => document.querySelector(s);
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -32,9 +33,15 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPrefer
 // held to a pixel budget rather than a flat ratio: the 1164px desktop frame stays
 // at 1.5x, and the 340px phone frame on a 3x phone is drawn at 3x instead of at
 // 1.5x and blown up, soft and jagged beside crisp text. (That is 0.7 megapixels,
-// under half of the desktop frame.) Standalone it can go to 2x.
+// under half of the desktop frame.) Standalone it is held to a budget as well, up
+// to 2x: a 1440x900 window on a 2x screen is 5.2 megapixels at full ratio, and it
+// ran under 40 fps through the first seconds on the test machine; at 2.3 it holds
+// 60 with room. (post.js scales the scene pass further on still bigger windows.)
 const EMBED = window.self !== window.top || document.documentElement.classList.contains('framed');
-const dpr = () => Math.min(devicePixelRatio, EMBED ? Math.min(3, Math.max(1, Math.sqrt(1.65e6 / Math.max(1, innerWidth * innerHeight)))) : 2);
+const dpr = () => {
+  const a = Math.max(1, innerWidth * innerHeight);
+  return Math.min(devicePixelRatio, EMBED ? Math.min(3, Math.max(1, Math.sqrt(1.65e6 / a))) : Math.min(2, Math.max(1, Math.sqrt(2.3e6 / a))));
+};
 renderer.setPixelRatio(dpr());
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -62,8 +69,11 @@ controls.enabled = false;                 // the scroll drives the camera; drag 
 // A dark studio: one warm key with a soft shadow, a rim to find the silhouette,
 // a whisper of neutral fill, and reflections from a studio room built in code
 // (no image). The only warm, moving light is still the one the combustion makes.
-scene.add(new THREE.HemisphereLight(0x2a3038, 0x05050a, 0.12));
-const key = new THREE.DirectionalLight(0xfff5ea, 2.0);
+// (the key a little up and the fill and sky a little down from where they were:
+// the shadow side of the block and the underside of the runners now fall away,
+// which is most of what separates a photographed casting from a flat-lit one)
+scene.add(new THREE.HemisphereLight(0x2a3038, 0x05050a, 0.08));
+const key = new THREE.DirectionalLight(0xfffaf5, 2.25);
 key.position.set(0.45, 1.5, 0.75);
 key.castShadow = true;
 // half the shadow map on touch devices, where the fill rate is what runs out
@@ -73,10 +83,10 @@ key.shadow.normalBias = 0.0015;
 scene.add(key, key.target);
 // A neutral, slightly cool rim: a warm one turned the alloy and the floor brown
 // and competed with the one warm light that means something, the combustion.
-const rim = new THREE.DirectionalLight(0xdde4ee, 1.1);
+const rim = new THREE.DirectionalLight(0xdde4ee, 1.3);
 rim.position.set(-0.9, 0.35, -1.1);
 scene.add(rim);
-const fill = new THREE.DirectionalLight(0xc8d0da, 0.4);
+const fill = new THREE.DirectionalLight(0xc8d0da, 0.25);
 fill.position.set(-0.6, -0.2, 0.9);
 scene.add(fill);
 scene.environment = studioEnvironment(renderer);
@@ -88,17 +98,38 @@ function studioEnvironment(r) {
   const box = new THREE.Mesh(new THREE.BoxGeometry(10, 6, 10), new THREE.MeshBasicMaterial({ color: 0x16171a, side: THREE.BackSide }));
   box.position.y = 2;
   room.add(box);
-  const panel = (w, h, x, y, z, k, col = 0xffffff) => {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(col).multiplyScalar(k), side: THREE.DoubleSide }));
+  // A softbox is brightest in the middle and falls off toward its frame, so each
+  // panel carries a falloff in its vertex colours: a broad face of cast alloy then
+  // shows a gradient in its sheen, the way metal photographs, not a flat tone.
+  const panel = (w, h, x, y, z, k, col = 0xffffff, fall = 0.55) => {
+    const g = new THREE.PlaneGeometry(w, h, 10, 10), p = g.attributes.position, c = new Float32Array(p.count * 3), base = new THREE.Color(col).multiplyScalar(k);
+    for (let i = 0; i < p.count; i++) {
+      const u = (2 * p.getX(i)) / w, v = (2 * p.getY(i)) / h, f = 1 - fall * Math.min(1, u * u * 0.6 + v * v * 0.6 + (u * u * v * v) * 0.4);
+      c[i * 3] = base.r * f; c[i * 3 + 1] = base.g * f; c[i * 3 + 2] = base.b * f;
+    }
+    g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
     m.position.set(x, y, z); m.lookAt(0, 0.2, 0); room.add(m);
+    return m;
   };
   panel(3.0, 1.6, 0.6, 4.6, 1.6, 2.2);                  // overhead key softbox
+  // A broad, dim scrim on the camera side, above the lens: every face of the
+  // casting turned toward the viewer reflects it, so the alloy reads as metal with
+  // a soft sheen across it instead of as grey paint under a lamp.
+  panel(6.0, 2.6, 1.2, 2.2, 4.4, 0.55, 0xf4f1ec, 0.7);
+  // Two hard strips, narrow and bright: turned edges, journals, bolt chamfers and
+  // pulley rims catch them as crisp white lines, the glints a photograph of
+  // machined steel clips on. Too small to add to the light on anything matte.
+  panel(0.16, 3.6, 2.4, 3.4, -0.6, 14.0, 0xffffff, 0.2);
+  panel(3.4, 0.12, -0.8, 4.2, 2.2, 12.0, 0xffffff, 0.2);
   // warm strip, rear left: only just warm. A saturated one put copper on every
   // alloy face turned away from the key (manifold runners, barrel flanks).
   panel(0.5, 3.2, -4.4, 1.6, -2.0, 2.6, 0xffeee0);
   panel(0.5, 3.2, 4.4, 1.6, -1.6, 2.0, 0xd8e4ff);       // cool strip, rear right
   panel(2.4, 1.2, 3.2, 1.2, 3.6, 0.6);                  // front fill card
-  panel(6.0, 6.0, 0, -0.95, 0, 0.15);                   // floor bounce
+  // floor bounce, kept low: brighter, every face turned down (the skirts, the sump
+  // flanks) mirrored it and read as pale plaster beside the same casting facing out
+  panel(6.0, 6.0, 0, -0.95, 0, 0.05);
   panel(3.2, 2.0, -3.4, 0.9, 3.2, 0.8);                 // low front-left card: the intake faces reflect it
   panel(4.0, 1.2, 0.0, 4.9, -1.0, 1.2);                 // high rear strip: a top edge light on the metal
   const pm = new THREE.PMREMGenerator(r);
@@ -109,8 +140,10 @@ function studioEnvironment(r) {
 }
 
 // the chamber that is firing lights its own interior. One light, moved and pulsed
-// per frame, so the engine's warmth is never a static lamp.
-const fire = new THREE.PointLight(0xff7a2a, 0, 0.55, 2);
+// per frame, so the engine's warmth is never a static lamp. It casts no shadow, so
+// its reach is held to the bore it is in and its neighbours (0.2 m): at 0.55 m it
+// lit the cam sprocket and the cover from inside the casting, as if through it.
+const fire = new THREE.PointLight(0xff7a2a, 0, 0.2, 2);
 scene.add(fire);
 
 // ---------------------------------------------------------------- engine
@@ -131,32 +164,10 @@ const REACH = Math.max(BOX.max.x - BOX.min.x, BOX.max.y - BOX.min.y, BOX.max.z -
   key.shadow.camera.near = 0.5; key.shadow.camera.far = 3.2;
   key.shadow.camera.updateProjectionMatrix();
 }
-// A floor just under the sump, dark and matte, that takes the shadow and melts into
-// the background with no edge, so the engine sits on something instead of floating.
-const floor = (() => {
-  // a weak specular: at the low stations a standard dielectric's grazing sheen
-  // turned the floor into a tan carpet under the warm rim
-  const m = new THREE.MeshPhysicalMaterial({ color: 0x141518, roughness: 0.7, metalness: 0, specularIntensity: 0.12, envMapIntensity: 0.4 });
-  const bg = new THREE.Color(0x07070a);
-  m.onBeforeCompile = sh => {
-    sh.uniforms.uBg = { value: bg };
-    sh.uniforms.uMid = { value: MID };
-    sh.uniforms.uR = { value: REACH * 1.15 };
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vFW;')
-      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvFW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vFW;\nuniform vec3 uBg, uMid;\nuniform float uR;')
-      .replace('#include <dithering_fragment>', '#include <dithering_fragment>\nfloat fd = smoothstep(0.25 * uR, uR, length(vFW.xz - uMid.xz));\ngl_FragColor.rgb = mix(gl_FragColor.rgb, uBg, fd);');
-  };
-  const f = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), m);
-  f.rotation.x = -Math.PI / 2;
-  // the engine stands on its sump (the drain plug is the lowest point); 30 mm of
-  // air under it read as a model hanging over a table
-  f.position.set(MID.x, BOX.min.y - 0.0005, MID.z);
-  f.receiveShadow = true;
-  f.name = 'floor';
-  scene.add(f);
-  return f;
-})();
+// A studio floor under the sump (stage.js): a lit pool that melts into the
+// background with no edge, the shadow held grey and fading with distance.
+const floor = makeFloor(MID, BOX, REACH, scene.background);
+scene.add(floor);
 
 const sectionPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.12);
 let section = 0;
@@ -183,7 +194,9 @@ const applySection = () => {
 // The sectioned interior was falling to pure black, which reads as a solid box
 // rather than a cutaway. This sits in the crankcase and lifts just enough to
 // separate the mechanism from the void behind it; the studio reflections do the rest.
-const guts = new THREE.PointLight(0xffb277, 0.30, REACH * 2.6, 2);
+// It casts no shadow, so its reach is held to the crankcase and the bores: at 1.5 m
+// it put a copper sheen on the cam sprocket, lit through the front of the block.
+const guts = new THREE.PointLight(0xffb277, 0.50, REACH * 0.85, 2);
 // pushed behind the crank line: close in, it blew the crankpin journals to white
 guts.position.set(MID.x, E.DECK - 0.13, -0.085);
 scene.add(guts);
@@ -201,8 +214,11 @@ glow.object.position.set(MID.x, MID.y + REACH * 0.10, MID.z - REACH * 0.85);
 scene.add(embers.object, dust.object, shaft.object, glow.object);
 
 // ---------------------------------------------------------------- post
-// bloom threshold is in linear now (the encode happens at the end), grain is halved
-const post = new Post(renderer, { bloom: 0.9, grain: 0.031, vignette: 0.62, aberration: 0.0014, threshold: 0.8 });
+// bloom threshold is in linear now (the encode happens at the end), grain is halved.
+// Reflected light is rolled off under 1.0 before the tone map (materials.js), so a
+// threshold above where that lands leaves the bloom to what glows: the burn, the
+// hot header. No lens fringing: over the surface detail it read as CG.
+const post = new Post(renderer, { bloom: 0.9, grain: 0.031, vignette: 0.62, aberration: 0, threshold: 0.8 });
 window.__post = post;       // test hook: post.sceneInfo holds the scene pass's draw calls and triangles
 // window.__ready means the first full engine frame is on screen. The shaders
 // compile in the background first (warm.js), so the end of this module is not
@@ -231,13 +247,27 @@ const CHAPTERS = [
   // low, from the flywheel quarter: rod angularity and the crank throws. From the
   // timing quarter the belt and the cam pulley stood in front of cylinder 1.
   { id: '02', label: 'The cycle', section: 1.00, ...st(-30, 4, 2.3, 0.08), heat: 0.85, glow: 0.30, shaft: 0.45 },
-  // high and close on the head, looking along the cams so the lobes turn toward the
-  // lens: cams, buckets, springs, valves. A close-up: it frames the head and lets
-  // the block run off below where the layout has room for it (see computeCrops)
-  { id: '03', label: 'The breath', section: 1.00, ...st(-40, 30, 0.9, E.CAM_Y), head: true, heat: 1.00, glow: 0.35, shaft: 0.30 },
-  // wide, almost square on, for the proof
-  { id: '04', label: 'The proof', section: 1.00, ...st(8, 10, 2.6), heat: 0.25, glow: 0.70, shaft: 0.20 },
+  // high and close on the head, from the flywheel quarter, so the view runs along the
+  // cams and the lobes turn toward the lens: cams, buckets, springs, valves, and the
+  // crowns under them. Close, so the perspective is steep and the head is the
+  // nearest, largest thing. Where the screen is tall enough the whole engine is in
+  // the frame: from 60 degrees round and 32 up, the fit hung the head from the top
+  // and the flywheel ran a few pixels off the bottom, a crop that looked accidental.
+  // Only the small frame, too short for the whole engine at a readable size, crops
+  // it (see computeCrops). Narrow screens come round less and lower (`narrow`): from
+  // up here a phone's column held the whole engine at 55 % of the width, the
+  // smallest engine of the story in its close-up.
+  { id: '03', label: 'The breath', section: 1.00, ...st(-45, 30, 1.0, E.CAM_Y), narrow: st(-38, 16, 1.0, E.CAM_Y), head: true, heat: 1.00, glow: 0.35, shaft: 0.30 },
+  // wide and low, a three-quarter view from the flywheel end for the proof: square on
+  // and from above it was the flattest view of the tour, a slab of section paint
+  // over an empty sump, more drawing than photograph
+  { id: '04', label: 'The proof', section: 1.00, ...st(-16, 5, 2.6), heat: 0.25, glow: 0.70, shaft: 0.20 },
 ];
+
+// A chapter may carry its own station for phones and narrow tablets (style.css's
+// 900 px break, where the copy sits above the engine rather than beside it).
+let NARROW = false;
+const stn = c => (NARROW && c.narrow) || c;
 
 // ---------------------------------------------------------------- state
 const eng = new Engine();
@@ -262,31 +292,61 @@ const CURVE = (() => {
   for (let i = 0; i < N; i++) {
     const a = (i * 720) / (N - 1);
     piston.push((wristHeight(a) - (SPEC.rodLength - SPEC.crankRadius)) / SPEC.stroke);
-    intake.push(intakeLiftAt(a) / SPEC.intakeLift);
-    exhaust.push(exhaustLiftAt(a) / SPEC.exhaustLift);
+    // the lift that moves the valves (engine.js): sim.js's own valveLift() taken
+    // either side of each event's centre, so both flanks are drawn and the trace
+    // opens where the card says it does
+    intake.push(intakeLift(a) / SPEC.intakeLift);
+    exhaust.push(exhaustLift(a) / SPEC.exhaustLift);
     press.push(cylinderPressure(a) / 1e5);
   }
-  return { N, piston, intake, exhaust, press, maxPress: Math.max(...press) };
+  return { N, piston, intake, exhaust, press, maxPress: Math.max(...press), peak: 0 };
 })();
+// The trace is drawn from samples 2 degrees apart, so its highest sample can sit a
+// digit under the true peak (38.6 against sim.js's 38.66 at CR 9). The Peak cyl
+// figure is sim.js's own maximum: cylinderPressure() swept at 0.01 degrees either
+// side of the highest sample.
+function refinePeak() {
+  let k = 0;
+  for (let i = 1; i < CURVE.N; i++) if (CURVE.press[i] > CURVE.press[k]) k = i;
+  const a0 = (k * 720) / (CURVE.N - 1);
+  let best = CURVE.press[k];
+  for (let j = -200; j <= 200; j++) best = Math.max(best, cylinderPressure(wrap720(a0 + j / 100)) / 1e5);
+  CURVE.peak = best;
+}
+refinePeak();
 // The pressure trace depends on the compression ratio; the lift and travel curves
 // do not. Without this the peak-pressure figure and the diagram stayed at their
 // load-time values while IMEP beside them moved with the slider.
 function rebuildPressure() {
   for (let i = 0; i < CURVE.N; i++) CURVE.press[i] = cylinderPressure((i * 720) / (CURVE.N - 1)) / 1e5;
   CURVE.maxPress = Math.max(...CURVE.press);
+  refinePeak();
 }
 
+// The power curve is always the full-load one, so its peak is the Peak power
+// figure beside it. Built at whatever load the engine happened to be at, it was a
+// different curve each time the ratio moved, and a blank one on overrun.
 const CHART = { pts: [], maxKw: 1 };
-function buildChart(load) {
+// The chart's scale is fixed at the most the slider can ask for (the full-load peak
+// at the highest ratio it offers), so moving the ratio visibly lifts or drops the
+// curve; scaled to its own peak, every ratio drew a curve of the same height.
+const CHART_TOP = (() => {
+  const cr = SPEC.compression;
+  setCompressionRatio(Number($('#r-cr').max));
+  const kw = peakPower().kw;
+  setCompressionRatio(cr);
+  return kw;
+})();
+function buildChart() {
   CHART.pts = []; let maxKw = 1;
   for (let r = 800; r <= SPEC.redline; r += 100) {
-    const kw = powerAt(r, load) / 1000;
-    CHART.pts.push([r, kw, torqueAt(r, load)]);
+    const kw = powerAt(r, 1) / 1000;
+    CHART.pts.push([r, kw]);
     if (kw > maxKw) maxKw = kw;
   }
   CHART.maxKw = maxKw;
 }
-buildChart(eng.load);
+buildChart();
 
 // ---------------------------------------------------------------- stage framing
 // Every layout leaves the engine some clear space: right of the copy on a desktop,
@@ -301,7 +361,12 @@ const PBASE = new THREE.Matrix4(), FIT = new THREE.Matrix4(), VP = new THREE.Mat
 // is being followed); the boxes a close-up crop must keep off; the part of the
 // silhouette that is framed (all of it, or the head of a close-up)
 const STAGES = [], FREE = [], OBST = [], CROP = [];
-let SAMPLES = null, SFLAG = null, SGRP = null, cropsDirty = true, focusAmt = 0;
+// Following a piston, the copy stands aside only as far as the engine can use its
+// room (per chapter, 0..1, from computeCrops). Where the copy shares a column with
+// the controls, as in the 1164 frame, the engine gains nothing from it, and fading
+// it only left the left third of the screen empty and dark beside the same engine.
+const ASIDE = [];
+let SAMPLES = null, SFLAG = null, SGRP = null, SZMIN = null, cropsDirty = true, focusAmt = 0;
 // the bolted-on accessories (alternator, filter, starter, manifold) come off whole
 // as the section reaches them: which are on, for the silhouette being taken
 const ACC = (E.accGroups || []).map(a => a.g), ACCON = new Uint8Array(ACC.length + 1);
@@ -317,7 +382,7 @@ const CLIPPED = 1, HEADPT = 2;           // sample flags: cut by the section; pa
 // only parts that actually moved are sampled again, and the grid key is a number.
 function sampleEngine(crankNow) {
   const v = new THREE.Vector3(), m = new THREE.Matrix4();
-  const cell = REACH / 90, seen = new Set(), pts = [], flags = [], grp = [], was = new Map();
+  const cell = REACH / 90, seen = new Set(), pts = [], flags = [], grp = [], zmin = [], was = new Map(), bb = new THREE.Box3();
   const same = (a, b) => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; };
   // parts the section plane cuts, so a sectioned chapter frames what is left of them
   const clipSet = new Set(E.clipMats || []);
@@ -337,15 +402,22 @@ function sampleEngine(crankNow) {
       const cf = [].concat(o.material).some(mt => clipSet.has(mt)) ? CLIPPED : 0;
       let gi = 0;
       for (let p = o; p && !gi; p = p.parent) gi = ACC.indexOf(p) + 1;
+      if (cf && !o.geometry.boundingBox) o.geometry.computeBoundingBox();
       for (let j = 0; j < copies; j++) {
         if (o.isInstancedMesh) { o.getMatrixAt(j, m); m.premultiply(o.matrixWorld); } else m.copy(o.matrixWorld);
+        // a cut part's nearest face to the lens side of the plane: if the plane
+        // passes through the part, its cut face lies on the plane (see silhouette)
+        const z0 = cf ? bb.copy(o.geometry.boundingBox).applyMatrix4(m).min.z : 0;
         for (let i = 0; i < pa.count; i += step) {
           v.fromBufferAttribute(pa, i).applyMatrix4(m);
           const key = (Math.round(v.x / cell) + 1024) * 4194304 + (Math.round(v.y / cell) + 1024) * 2048 + Math.round(v.z / cell) + 1024;
           if (seen.has(key)) continue;
           seen.add(key); pts.push(v.x, v.y, v.z);
-          flags.push(cf | (v.y > E.DECK - 0.004 ? HEADPT : 0));   // the head: the deck and up
+          // the head and the bores down to the crowns at the bottom of the stroke, so
+          // a close-up that crops the block still shows every piston crown
+          flags.push(cf | (v.y > E.DECK - SPEC.stroke - 0.012 ? HEADPT : 0));
           grp.push(gi);
+          zmin.push(z0);
         }
       }
     });
@@ -354,12 +426,20 @@ function sampleEngine(crankNow) {
   E.root.updateMatrixWorld(true);
   SFLAG = Uint8Array.from(flags);
   SGRP = Uint8Array.from(grp);
+  SZMIN = Float32Array.from(zmin);
   return new Float32Array(pts);
 }
 
+// A sample of a cut part that lies beyond the plane is not drawn, but the part's
+// cut face is, on the plane, and its outline runs between the vertices. Dropping
+// those samples left the cut outline out of the fitted box, so the sump's cut edge
+// ran into the hint under it. Taken onto the plane, they bound the cut face; a part
+// wholly beyond the plane is gone and is left out. Returns the z to project, or NaN.
+const cutZ = (j, z, zc) => !(SFLAG[j] & CLIPPED) || z <= zc ? z : SZMIN[j] < zc ? zc : NaN;
+
 // The silhouette's box in NDC under the view-projection e, from every sample (or
-// only those flagged `only`), leaving out what a plane at z = zc has cut away and
-// the accessories that are off (ACCON).
+// only those flagged `only`), with what a plane at z = zc has cut away taken onto
+// the plane (cutZ), and without the accessories that are off (ACCON).
 function silhouette(e, only, out, zc) {
   const P = SAMPLES, F = SFLAG, G = SGRP;
   ACCON[0] = 1;
@@ -367,8 +447,9 @@ function silhouette(e, only, out, zc) {
   for (let i = 0, j = 0; i < P.length; i += 3, j++) {
     const f = F[j];
     if (only && !(f & only)) continue;
-    const x = P[i], y = P[i + 1], z = P[i + 2];
-    if (((f & CLIPPED) && z > zc) || !ACCON[G[j]]) continue;
+    if (!ACCON[G[j]]) continue;
+    const x = P[i], y = P[i + 1], z = cutZ(j, P[i + 2], zc);
+    if (z !== z) continue;
     const w = e[3] * x + e[7] * y + e[11] * z + e[15];
     if (w <= 1e-4) continue;
     const nx = (e[0] * x + e[4] * y + e[8] * z + e[12]) / w, ny = (e[1] * x + e[5] * y + e[9] * z + e[13]) / w;
@@ -386,10 +467,24 @@ const cutAt = s => (s > 0.002 ? 0.12 - s * 0.118 : Infinity);
 // cam card once it shows), each on one side. Every combination of sides is tried
 // (pruned, it is a handful of boxes) and the one that leaves the engine the most
 // room wins, with a mild preference for a stage near the middle of the screen.
+// The canvas's own size, not the window's: with a desktop scrollbar the window is
+// 15 px wider than the canvas, and the engine was fitted to a stage that ran under
+// the scrollbar, 13 px from the readout's first column at 1164.
+const VW = () => canvas.clientWidth || innerWidth, VH = () => canvas.clientHeight || innerHeight;
 function measureStages() {
-  const W = innerWidth, H = innerHeight;
+  const W = VW(), H = VH();
   if (!W || !H) return;
-  const gap = clamp(Math.min(W, H) * 0.022, 8, 22);
+  // (at least 10 px: at 8 the small frame's sump sat on the host's bezel and a
+  // phone's sump on the pedal's top edge)
+  const gap = clamp(Math.min(W, H) * 0.022, 10, 22);
+  // Against the copy and the instruments a desktop wants more air than against the
+  // screen's edges: at 13-16 px the plenum's end cap sat 15 px from "not a picture."
+  // and the crank pulley 14 px from the readout, which read as cramped.
+  const room2 = W > 900 && H > 480 ? clamp(W * 0.02, 22, 34) : gap;
+  // (a phone's floor pool runs under the scrim over the controls: a few more pixels
+  // there keep the sump and its contact shadow clear of it)
+  const roomCtl = W <= 900 && H > 480 ? gap + 16 : room2;
+  const air = (r, g) => r && { left: r.left, top: r.top, right: r.right, bottom: r.bottom, g };
   const box = el => { const r = el && el.getBoundingClientRect(); return r && r.width > 0 && r.height > 0 ? r : null; };
   const text = el => {
     if (!box(el)) return null;
@@ -405,11 +500,14 @@ function measureStages() {
   const spare = s => Math.max(s.x1 - s.x0, (s.y1 - s.y0) * 0.9);
   const score = s => room(s) * (1 - 0.5 * Math.abs((s.x0 + s.x1) / 2 - W / 2) / (W / 2)) + 0.04 * spare(s);
   const bound = s => room(s) + 0.04 * spare(s);                     // no later cut can beat this
-  const hits = (o, S) => !(o.right <= S.x0 || o.left >= S.x1 || o.bottom <= S.y0 || o.top >= S.y1);
-  const cut = (o, S, side) => side === 'top' ? { ...S, y0: Math.max(S.y0, o.bottom + gap) }
-    : side === 'bottom' ? { ...S, y1: Math.min(S.y1, o.top - gap) }
-    : side === 'left' ? { ...S, x0: Math.max(S.x0, o.right + gap) }
-    : { ...S, x1: Math.min(S.x1, o.left - gap) };
+  // (a box within its gap of the stage still counts: when the controls had already
+  // pushed the stage's edge a pixel past the headline's, the headline went uncut
+  // and the engine stood 1 px from it)
+  const hits = (o, S, g = o.g || gap) => !(o.right + g <= S.x0 || o.left - g >= S.x1 || o.bottom + g <= S.y0 || o.top - g >= S.y1);
+  const cut = (o, S, side, g = o.g || gap) => side === 'top' ? { ...S, y0: Math.max(S.y0, o.bottom + g) }
+    : side === 'bottom' ? { ...S, y1: Math.min(S.y1, o.top - g) }
+    : side === 'left' ? { ...S, x0: Math.max(S.x0, o.right + g) }
+    : { ...S, x1: Math.min(S.x1, o.left - g) };
   const SIDES = ['top', 'bottom', 'left', 'right'];
   const valid = s => s.x1 > s.x0 && s.y1 > s.y0;
   const full = { x0: gap, y0: gap, x1: W - gap, y1: H - gap };
@@ -429,14 +527,15 @@ function measureStages() {
 
   // the hint, the stamp and the scroll cue step aside for a close-up (see .crop)
   const minor = ['.cue', '#hint', '.stamp'].map(s => box($(s))).filter(Boolean);
-  const major = ['.topbar', '.vert', '.controls', '.readout', '#rev'].map(s => box($(s))).filter(Boolean);
-  const card = box($('.camcard'));
+  const major = ['.topbar', '.vert', '.controls', '.readout', '#rev']
+    .map(s => air(box($(s)), s === '.controls' ? roomCtl : s === '.readout' ? room2 : 0)).filter(Boolean);
+  const card = air(box($('.camcard')), room2);
   // a layout with no real room left (should not happen at any size shipped) falls
   // back to the whole screen rather than a postage stamp
   const sane = S => (!S || S.x1 - S.x0 < W * 0.2 || S.y1 - S.y0 < H * 0.18) ? { x0: gap, y0: Math.min(H * 0.3, 56), x1: W - gap, y1: H - gap } : S;
-  const pad = b => ({ left: b.left - gap / 2, top: b.top - gap / 2, right: b.right + gap / 2, bottom: b.bottom + gap / 2 });
+  const pad = b => { const g = (b.g || gap) / 2; return { left: b.left - g, top: b.top - g, right: b.right + g, bottom: b.bottom + g }; };
   document.querySelectorAll('.chapter').forEach((ch, i) => {
-    const copy = [...ch.querySelectorAll('.kicker, h1, h2, .lede')].map(text).filter(Boolean);
+    const copy = [...ch.querySelectorAll('.kicker, h1, h2, .lede')].map(el => air(text(el), room2)).filter(Boolean);
     const inst = [...major, ...(i >= 1 && card ? [card] : [])];                   // the cam card shows from 01
     STAGES[i] = sane(solve([...inst, ...minor, ...copy]));
     FREE[i] = sane(solve([...inst, ...minor]));
@@ -448,6 +547,11 @@ function measureStages() {
       { left: W, right: 1e6, top: -1e6, bottom: 1e6 });
   });
   cropsDirty = true;
+  // On a phone the pedal and the figures sit over the lit floor under the engine;
+  // a scrim from the top of the controls down keeps them legible (style.css). The
+  // engine's stage ends above the controls, so it never darkens the machine.
+  const ctl = box($('.controls'));
+  document.body.style.setProperty('--scrim', ctl ? `${Math.max(0, Math.round(H - ctl.top))}px` : '0px');
 }
 document.fonts && document.fonts.ready.then(measureStages);
 
@@ -483,22 +587,33 @@ function fitRect(r, s, align, out) {
 // phone, with the controls under it, gets as much of one as fits.
 function computeCrops() {
   cropsDirty = false;
-  const W = innerWidth, H = innerHeight, S = {}, T = {}, r = {};
+  const W = VW(), H = VH(), S = {}, T = {}, r = {};
   CHAPTERS.forEach((c, i) => {
     CROP[i] = FULLCROP;
-    if (!c.head || !STAGES[i]) return;
-    camera.position.copy(c.cam); camera.lookAt(c.look); camera.updateMatrixWorld();
+    ASIDE[i] = 1;
+    if (!STAGES[i] || !FREE[i]) return;
+    camera.position.copy(stn(c).cam); camera.lookAt(stn(c).look); camera.updateMatrixWorld();
     VP.multiplyMatrices(PBASE, camera.matrixWorldInverse);
     const zc = cutAt(c.section), e = VP.elements;
     accAt(zc);
+    // how much bigger the engine fits once the copy is out of the way
+    if (silhouette(e, 0, BOXF, zc)) {
+      const kIn = s => { toNDC(s, W, H, S); return Math.min((S.x1 - S.x0) / (BOXF.x1 - BOXF.x0), (S.y1 - S.y0) / (BOXF.y1 - BOXF.y0)); };
+      // (all or nothing: a copy half faded with the engine half into its room is
+      // the smudge the chapter hand-overs are timed to avoid)
+      ASIDE[i] = kIn(FREE[i]) / kIn(STAGES[i]) > 1.05 ? 1 : 0;
+    }
+    // (only a short screen crops: see CHAPTERS[3])
+    if (!c.head || H > 480) return;
     if (!silhouette(e, 0, BOXF, zc) || !silhouette(e, HEADPT, BOXH, zc)) return;
     const F = BOXF, fw = F.x1 - F.x0, fh = F.y1 - F.y0;
     const head = { x0: (BOXH.x0 - F.x0) / fw, y0: (BOXH.y0 - F.y0) / fh, x1: (BOXH.x1 - F.x0) / fw, y1: (BOXH.y1 - F.y0) / fh, align: 0 };
     // every sample left standing, projected once
     const nx = [], ny = [];
     for (let p = 0, j = 0; p < SAMPLES.length; p += 3, j++) {
-      const x = SAMPLES[p], y = SAMPLES[p + 1], z = SAMPLES[p + 2];
-      if (((SFLAG[j] & CLIPPED) && z > zc) || !ACCON[SGRP[j]]) continue;
+      if (!ACCON[SGRP[j]]) continue;
+      const x = SAMPLES[p], y = SAMPLES[p + 1], z = cutZ(j, SAMPLES[p + 2], zc);
+      if (z !== z) continue;
       const w = e[3] * x + e[7] * y + e[11] * z + e[15];
       if (w <= 1e-4) continue;
       nx.push((e[0] * x + e[4] * y + e[8] * z + e[12]) / w); ny.push((e[1] * x + e[5] * y + e[9] * z + e[13]) / w);
@@ -525,6 +640,7 @@ function computeCrops() {
   });
 }
 
+const asideNow = t => { const a = ASIDE[chapter] ?? 1, b = ASIDE[Math.min(chapter + 1, CHAPTERS.length - 1)] ?? 1; return a + (b - a) * t; };
 // This scroll position's stage in NDC (into STG) and the part of the silhouette
 // box F to put in it (into RECT).
 function stageNow(t) {
@@ -537,8 +653,8 @@ function stageNow(t) {
   S.x0 += Math.max(0, a.x0 - S.x0) * op; S.y0 += Math.max(0, a.y0 - S.y0) * op;
   S.x1 -= Math.max(0, S.x1 - a.x1) * op; S.y1 -= Math.max(0, S.y1 - a.y1) * op;
   // following a piston, the copy fades and the engine may use its room
-  if (focusAmt > 0.001) lerpRect(S, lerpRect(FREE[chapter], FREE[Math.min(chapter + 1, CHAPTERS.length - 1)], t), focusAmt, S);
-  toNDC(S, innerWidth, innerHeight, STG);
+  if (focusAmt * asideNow(t) > 0.001) lerpRect(S, lerpRect(FREE[chapter], FREE[Math.min(chapter + 1, CHAPTERS.length - 1)], t), focusAmt * asideNow(t), S);
+  toNDC(S, VW(), VH(), STG);
   STG.ok = true;
 }
 function cropNow(t, F) {
@@ -576,6 +692,7 @@ function fitStage() {
 // it: scaled down about the stage's centre, then shifted in. It never enlarges, so
 // a drag still turns the machine rather than refitting it, and following a piston
 // can no longer run the engine under the headline, the cam card or the controls.
+let lastFocus = -1;                           // the cylinder followed, kept while the follow fades out
 function holdInStage() {
   if (!SAMPLES || !STG.ok) return;
   camera.updateMatrixWorld();
@@ -603,6 +720,7 @@ function sizeCanvases() {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   PBASE.copy(camera.projectionMatrix);
+  NARROW = w <= 900;
   measureStages();
   dDPR = Math.min(devicePixelRatio, 2);
   dW = dgc.clientWidth; dH = dgc.clientHeight;
@@ -612,6 +730,7 @@ function sizeCanvases() {
   // on short screens the caption under the power curve gives its line back, so the
   // curve names itself instead of being an unlabelled sparkline
   chartLabel = getComputedStyle($('.camcard .cap')).display === 'none';
+  if (!canFollow()) focusCyl = -1;          // nothing left on screen to name it
 }
 addEventListener('resize', sizeCanvases);
 
@@ -622,12 +741,16 @@ function drawDiagram(crank) {
   // The firing marks live in their own gutter above the plot, so they no longer
   // print on the stroke names; the pressure band is scaled to the live peak, so it
   // cannot overshoot into the labels when the compression ratio goes up.
-  const padL = 26, padR = 6, padT = 22, padB = 15;
+  // The stroke names have a lane of their own at the top of the plot, and every
+  // trace starts under it: with the names over the pressure band, the hump after
+  // TDC rose through POWER and the names sat on the traces on short screens.
+  const padL = 26, padR = 6, padT = 22, padB = 15, LANE = 14;
   const W = dW - padL - padR, H = dH - padT - padB;
   const X = a => padL + (a / 720) * W;
   const Y = (v, top, hh) => padT + top + (1 - v) * hh;
   const PN = CURVE.maxPress * 1.05;
   const FONT = '10px "IBM Plex Mono", monospace';
+  const hP = (H - LANE) * 0.36, top = LANE + hP + 5, hh = H - top;
 
   [['POWER', 0, 180], ['EXHAUST', 180, 360], ['INTAKE', 360, 540], ['COMPRESSION', 540, 720]]
     .forEach(([label, a0, a1], i) => {
@@ -637,7 +760,7 @@ function drawDiagram(crank) {
       dctx.font = FONT;
       dctx.textAlign = 'center';
       const w = X(a1) - X(a0);
-      dctx.fillText(dctx.measureText(label).width > w - 4 ? label.slice(0, 5) + '.' : label, (X(a0) + X(a1)) / 2, padT + 11);
+      dctx.fillText(dctx.measureText(label).width > w - 4 ? label.slice(0, 5) + '.' : label, (X(a0) + X(a1)) / 2, padT + 10);
     });
 
   dctx.strokeStyle = 'rgba(255,255,255,.09)';
@@ -650,21 +773,19 @@ function drawDiagram(crank) {
     if (a < 720) dctx.fillText(String(a), X(a), dH - 3);
   }
 
-  const hP = H * 0.34;
   dctx.beginPath();
-  dctx.moveTo(X(0), Y(0, 0, hP));
+  dctx.moveTo(X(0), Y(0, LANE, hP));
   for (let i = 0; i < CURVE.N; i++) {
     const a = (i * 720) / (CURVE.N - 1);
-    dctx.lineTo(X(a), Y(CURVE.press[i] / PN, 0, hP));
+    dctx.lineTo(X(a), Y(CURVE.press[i] / PN, LANE, hP));
   }
-  dctx.lineTo(X(720), Y(0, 0, hP));
+  dctx.lineTo(X(720), Y(0, LANE, hP));
   dctx.closePath();
   dctx.fillStyle = 'rgba(255,120,50,.20)';
   dctx.fill();
   dctx.strokeStyle = 'rgba(255,140,70,.75)';
   dctx.stroke();
 
-  const top = hP + 5, hh = H - top;
   const curve = (arr, style, w, scale = 0.78) => {
     dctx.beginPath();
     for (let i = 0; i < CURVE.N; i++) {
@@ -696,32 +817,49 @@ function drawDiagram(crank) {
   // can watch one cylinder go round while the others sit behind it.
   if (focusCyl >= 0) {
     const off = FIRE_ANGLE[focusCyl];
-    const hP2 = H * 0.34, top2 = hP2 + 5, hh2 = H - top2;
+    const hP2 = hP, top2 = top, hh2 = hh;
+    // the cylinder's own cycle, drawn at the crank angles it happens at: its phase
+    // a is at crank a + off. Where that wraps past 720 the trace is broken and
+    // picked up at 0, rather than ruled straight back across the plot.
     const at2 = a => X(wrap720(a + off));
+    const trace = (arr, y, fillTo) => {
+      let px = -1, seg = [];
+      const flush = () => {
+        if (seg.length < 2) { seg = []; return; }
+        dctx.beginPath();
+        seg.forEach(([x, yy], k) => (k ? dctx.lineTo(x, yy) : dctx.moveTo(x, yy)));
+        if (fillTo !== undefined) {
+          dctx.save();
+          dctx.lineTo(seg[seg.length - 1][0], fillTo); dctx.lineTo(seg[0][0], fillTo); dctx.closePath();
+          dctx.fill();
+          dctx.restore();
+          dctx.beginPath();
+          seg.forEach(([x, yy], k) => (k ? dctx.lineTo(x, yy) : dctx.moveTo(x, yy)));
+        }
+        dctx.stroke();
+        seg = [];
+      };
+      for (let i = 0; i < CURVE.N; i++) {
+        const x = at2((i * 720) / (CURVE.N - 1));
+        if (x < px) flush();
+        seg.push([x, y(arr[i])]); px = x;
+      }
+      flush();
+    };
     dctx.save();
-    dctx.beginPath();
-    dctx.moveTo(at2(0), Y(CURVE.press[0] / PN, 0, hP2));
-    for (let i = 1; i < CURVE.N; i++) dctx.lineTo(at2((i * 720) / (CURVE.N - 1)), Y(CURVE.press[i] / PN, 0, hP2));
-    dctx.lineTo(at2(720), Y(0, 0, hP2));
-    dctx.closePath();
     dctx.fillStyle = 'rgba(255,150,60,.42)';
-    dctx.fill();
     dctx.strokeStyle = 'rgba(255,190,120,.98)';
     dctx.lineWidth = 1.8;
-    dctx.stroke();
+    trace(CURVE.press, v => Y(v / PN, LANE, hP2), Y(0, LANE, hP2));
     const bright = (arr, style, scale) => {
-      dctx.beginPath();
-      for (let i = 0; i < CURVE.N; i++) {
-        const a = (i * 720) / (CURVE.N - 1);
-        const x = at2(a), y = Y(arr[i], top2, hh2 * scale);
-        i ? dctx.lineTo(x, y) : dctx.moveTo(x, y);
-      }
-      dctx.strokeStyle = style; dctx.lineWidth = 1.9; dctx.stroke();
+      dctx.strokeStyle = style; dctx.lineWidth = 1.9;
+      trace(arr, v => Y(v, top2, hh2 * scale));
     };
     bright(CURVE.piston, '#f4efe4', 0.92);
     bright(CURVE.intake, '#a8d4ff', 0.78);
     bright(CURVE.exhaust, '#ff8a3c', 0.78);
-    const fx = at2(crank);
+    // now, for this cylinder as for the others, is the crank angle itself
+    const fx = X(crank);
     dctx.strokeStyle = 'rgba(255,220,170,1)';
     dctx.lineWidth = 1.6;
     dctx.beginPath(); dctx.moveTo(fx, padT - 4); dctx.lineTo(fx, padT + H + 2); dctx.stroke();
@@ -737,6 +875,10 @@ function paintFocus(crank) {
   const phi = wrap720(crank - FIRE_ANGLE[focusCyl]);
   // the chamber's pressure at the charge actually trapped now, scaled exactly as
   // sim.js scales it for torque (charge = volumetric efficiency x load)
+  // On overrun (and at the limiter) sim.js cuts the fuel and the trapped charge is
+  // zero: the line says so, as the readout's A/F and fuel use do, rather than quoting
+  // an absolute 0.0 bar mid-power-stroke, which reads as a bug.
+  if (!(eng.load > 0)) { el.textContent = `cyl ${focusCyl + 1} · ${STROKE(phi)} · fuel cut`; return; }
   const p = cylinderPressure(phi) * volumetricEfficiency(eng.rpm) * eng.load / 1e5;
   el.textContent = `cyl ${focusCyl + 1} · ${STROKE(phi)} · ${p.toFixed(1)} bar`;
 }
@@ -745,9 +887,14 @@ function drawChart(rpm) {
   if (!tW || !tH) return;
   tctx.setTransform(dDPR, 0, 0, dDPR, 0, 0);
   tctx.clearRect(0, 0, tW, tH);
-  const padT = 5, padB = 4, H = tH - padT - padB, W = tW;
-  const X = r => ((r - 800) / (SPEC.redline - 800)) * W;
-  const Y = kw => padT + (1 - kw / (CHART.maxKw * 1.14)) * H;
+  // With the caption hidden (short screens) the curve names itself, in a band of its
+  // own above the plot: drawn over the plot, the curve ran through the words.
+  const padT = chartLabel ? 17 : 5, padB = 4, H = tH - padT - padB, W = tW;
+  const X = r => ((clamp(r, 800, SPEC.redline) - 800) / (SPEC.redline - 800)) * W;
+  // the full-load curve bounds every live point (less load is less power at any
+  // speed), and overrun, where the power is negative, sits on the baseline
+  const top = Math.max(CHART_TOP, CHART.maxKw) * 1.06;
+  const Y = kw => padT + (1 - clamp(kw, 0, top) / top) * H;
   tctx.beginPath();
   tctx.moveTo(X(800), Y(0));
   CHART.pts.forEach(([r, kw]) => tctx.lineTo(X(r), Y(kw)));
@@ -764,12 +911,20 @@ function drawChart(rpm) {
     tctx.font = '10px "IBM Plex Mono", monospace';
     tctx.textAlign = 'left'; tctx.textBaseline = 'top';
     tctx.fillStyle = 'rgba(233,228,218,.62)';
-    tctx.fillText('POWER, kW, AGAINST RPM', 5, 5);
-    tctx.textBaseline = 'alphabetic';
+    tctx.fillText('POWER AT FULL LOAD, kW, AGAINST RPM', 0, 3);
+    tctx.textAlign = 'right';
+    tctx.fillText('NOW', W, 3);
+    tctx.fillStyle = '#ffd9a8';
+    tctx.beginPath(); tctx.arc(W - tctx.measureText('NOW').width - 7, 8, 2.8, 0, Math.PI * 2); tctx.fill();
+    tctx.textAlign = 'left'; tctx.textBaseline = 'alphabetic';
   }
-  const mx = X(clamp(rpm, 800, SPEC.redline)), my = Y(powerAt(rpm, eng.load) / 1000);
+  // the engine now: its speed and the power it is making at the load it is at,
+  // under the full-load curve unless the throttle is wide open
+  const mx = X(rpm), my = Y(powerAt(rpm, eng.load) / 1000);
+  tctx.fillStyle = 'rgba(255,217,168,.16)';
+  tctx.fillRect(Math.round(mx) - 0.5, padT, 1, H);
   tctx.fillStyle = '#ffd9a8';
-  tctx.beginPath(); tctx.arc(mx, my, 2.8, 0, Math.PI * 2); tctx.fill();
+  tctx.beginPath(); tctx.arc(clamp(mx, 3, W - 3), clamp(my, padT + 3, padT + H - 1), 2.8, 0, Math.PI * 2); tctx.fill();
 }
 
 // ---------------------------------------------------------------- readout
@@ -786,8 +941,9 @@ function paintReadout(crank) {
   $('#v-power').textContent = fmt(kw, 1);
   $('#v-crank').textContent = fmt(crank) + '°';
   $('#v-imep').textContent = fmt(imep() / 1e5, 2);
-  $('#v-peakp').textContent = fmt(CURVE.maxPress, 1);
-  $('#v-af').textContent = airFuelRatio(load).toFixed(1);
+  $('#v-peakp').textContent = fmt(CURVE.peak, 1);
+  // on overrun (and at the limiter) the fuel is cut: there is no mixture to quote
+  $('#v-af').textContent = load > 0 ? airFuelRatio(load).toFixed(1) : '—';
   $('#v-bsfc').textContent = isFinite(bsfc(rpm, load)) ? fmt(bsfc(rpm, load)) : '—';
   $('#v-cr').textContent = SPEC.compression.toFixed(1);
   $('#v-bar').style.transform = `scaleX(${clamp(rpm / SPEC.redline, 0, 1)})`;
@@ -817,6 +973,8 @@ function paintReadout(crank) {
     if (k === 'rod') el.textContent = fmt(SPEC.rodLength * 1000);
     if (k === 'bore') el.textContent = mm(SPEC.bore);
     if (k === 'stroke') el.textContent = mm(SPEC.stroke);
+    // the rail down the left edge names the engine from the simulation's own spec
+    if (k === 'rail') el.textContent = `${SPEC.name} — ${SPEC.label} · ${fmt(SPEC.displacement * 1e6)} cc`;
   });
   $('#ev-in').textContent = `${deg(360 - SPEC.intakeOpen)} BTDC · ${deg(SPEC.intakeClose - 540)} ABDC`;
   $('#ev-ex').textContent = `${deg(180 - SPEC.exhaustOpen)} BBDC · ${deg(SPEC.exhaustClose - 360)} ATDC`;
@@ -854,8 +1012,8 @@ function applyChapter() {
   const a = CHAPTERS[chapter];
   const b = CHAPTERS[Math.min(chapter + 1, CHAPTERS.length - 1)];
   const t = easeInOut(localT);
-  aimPos.lerpVectors(a.cam, b.cam, t);
-  aimLook.lerpVectors(a.look, b.look, t);
+  aimPos.lerpVectors(stn(a).cam, stn(b).cam, t);
+  aimLook.lerpVectors(stn(a).look, stn(b).look, t);
   // The first cut is made at the turn from 00 to 01, as the chapter 00 copy gives
   // way to "Cut it open", and it is made quickly (see CUT_S). From 01 on, the scroll
   // takes the plane the rest of the way, once the first cut has finished.
@@ -886,13 +1044,21 @@ function applyChapter() {
   if (named !== lastNamed) {
     const first = lastNamed < 0;
     lastNamed = named;
-    document.querySelectorAll('.chapter').forEach((el, i) => { el.style.transitionDelay = i === named && !first ? '.22s' : '0s'; });
+    // The old copy goes in a fifth of a second and the new one waits a third of a
+    // second, so the two are never up together: with the old copy on its half-second
+    // fade and the new one after 0.22 s, the new headline faded in over a ghost of
+    // the old one at the automatic cut and at the demo's loop back to 00.
+    document.querySelectorAll('.chapter').forEach((el, i) => {
+      const inc = i === named && !first;
+      el.style.transitionDelay = inc ? '.34s' : '0s';
+      el.style.transitionDuration = inc || first ? '' : '.2s';
+    });
     clearTimeout(handT);
-    handT = setTimeout(() => document.querySelectorAll('.chapter').forEach(el => { el.style.transitionDelay = '0s'; }), 800);
+    handT = setTimeout(() => document.querySelectorAll('.chapter').forEach(el => { el.style.transitionDelay = '0s'; el.style.transitionDuration = ''; }), 900);
   }
   document.querySelectorAll('.chapter').forEach((el, i) => {
     const o = i !== named ? 0 : named === chapter ? s : 1;
-    el.style.opacity = o * (1 - focusAmt);
+    el.style.opacity = o * (1 - focusAmt * asideNow(t));
     el.style.transform = `translateY(${(1 - (i === named ? o : 1)) * -16}px)`;
   });
   document.querySelectorAll('.chapnum').forEach((el, i) => {
@@ -901,6 +1067,9 @@ function applyChapter() {
   });
   // the cam card earns its space once the casting is open and the cycle is running
   $('.camcard').classList.toggle('show', chapter >= 1);
+  // "Nothing here is a picture of a number" is up: the small frame, which shows no
+  // readout otherwise, shows the live figures it is talking about (style.css)
+  document.documentElement.classList.toggle('at4', named === 4);
   $('.cue').classList.toggle('gone', scrollY > innerHeight * 0.25);
   $('#hint').classList.toggle('show', scrollY > innerHeight * 0.25);   // takes over from the scroll cue
 }
@@ -925,11 +1094,14 @@ bindRange('#r-throttle', v => {
   // back down mid-rev and the engine would never spool up.
   if (Math.abs(v - eng.throttle) > 0.001) cancelDemo();
   eng.throttle = v;
+  // (the take-over repaints the slider at a closed throttle; this is the visitor's)
+  $('#r-throttle').value = String(v);
+  $('#v-throttle').textContent = fmt(v * 100);
 });
 bindRange('#r-cr', v => {
   setCompressionRatio(v);
   rebuildPressure();
-  buildChart(eng.load);
+  buildChart();
   const pt = peakTorque(), pp = peakPower();
   $('#v-pkt').textContent = fmt(pt.nm);
   $('#v-pkp').textContent = fmt(pp.kw, 1);
@@ -960,6 +1132,7 @@ function pickCyl(e) {
   return E.units.findIndex(u => u.piston === hit[0].object.parent || isDescendant(u.piston, hit[0].object));
 }
 function isDescendant(root, node) { for (let p = node; p; p = p.parent) if (p === root) return true; return false; }
+const canFollow = () => getComputedStyle($('.camcard')).display !== 'none';
 
 canvas.addEventListener('pointerdown', e => {
   cancelDemo();
@@ -980,13 +1153,16 @@ canvas.addEventListener('pointermove', e => {
     }
     return;
   }
-  const c = pickCyl(e);
+  const c = e.pointerType === 'mouse' && canFollow() ? pickCyl(e) : -1;
   if (c !== hoverCyl) { hoverCyl = c; canvas.style.cursor = c >= 0 ? 'pointer' : 'grab'; }
 });
 function endDrag(e) {
   if (!drag.on) return;
   drag.on = false;
-  if (drag.moved < 7) {                     // a tap, not a drag: focus a cylinder
+  // A tap, not a drag: follow a cylinder. Only where the cam card is on screen to
+  // name it: on a phone or in the small frame a tap (easily made by accident) faded
+  // the headline and showed nothing in its place.
+  if (drag.moved < 7 && canFollow()) {
     const c = pickCyl(e);
     focusCyl = c === focusCyl ? -1 : c;
     if (focusCyl >= 0) cancelDemo();
@@ -1055,6 +1231,12 @@ if (EMBED) {
   const m = $('.mark');
   m.target = '_blank'; m.rel = 'noopener';
   m.setAttribute('aria-label', 'Realm Systems, 3D demo (opens realmsystems.net in a new tab)');
+  // "3D product sites" goes to the page that sells them, in the host window. Framed
+  // on that page itself it would only reload it, so it is shown only where the host
+  // is another Realm page (same origin, so its path can be read; elsewhere, hidden).
+  let host = '';
+  try { host = window.top.location.pathname; } catch (e) { /* another origin */ }
+  if (host && !/^\/3d(\.html)?\/?$/.test(host)) document.documentElement.classList.add('link3d');
 }
 
 // ---------------------------------------------------------------- loop
@@ -1068,7 +1250,41 @@ const SPH = new THREE.Spherical();
 // it, it walks its own story and works the throttle. Any input hands control back.
 const demo = { on: !reduceMotion, y: 0, idle: 0, phase: 0, hold: 0 };
 const FRAMED = document.documentElement.classList.contains('framed');
-function cancelDemo() { if (demo.on) { demo.on = false; } demo.idle = 0; }
+// Taking over from the demo lets go of the throttle it was working, unless the
+// visitor is actually holding the pedal: a wheel notch during the demo's rev used
+// to leave the engine at 85% with the pedal drawn up and nothing on screen saying
+// the throttle was open. (A slider or pedal that caused the take-over sets its
+// own throttle straight after this.)
+function cancelDemo() {
+  if (demo.on) {
+    demo.on = false;
+    if (!pedalHeld) { eng.throttle = 0; pedalRamp = false; paintPedal(); }
+  }
+  demo.idle = 0;
+}
+// The loop from 04 back to 00 happens in the dark (style.css, html.dip), once the
+// canvas has actually reached the ground colour (or after 0.6 s whatever): scrolled
+// back in the light, the section closed in reverse over half a second, with the
+// accessories coming back see-through, cut paint on the rails, no headline and two
+// chapters lit in the nav. The page dips, this puts it back to 00 with the casting
+// closed and the camera on its station, and it fades up on the whole engine.
+let loopT = 0;
+function loopBack() {
+  loopT = 0;
+  demo.y = 0; demo.hold = 0; demo.idle = 0; demo.phase = 0;
+  scrollTo({ top: 0, behavior: 'instant' });
+  readScroll();
+  cutK = 0;                                   // closed at once, not swept back
+  // the 00 copy is simply up when the lights come back: no hand-over, no fade
+  lastNamed = 0;
+  const chs = document.querySelectorAll('.chapter');
+  chs.forEach(el => { el.style.transitionDelay = '0s'; el.style.transitionDuration = '0s'; });
+  applyChapter();
+  camPos.copy(aimPos); camLook.copy(aimLook);
+  orbitYaw = 0; orbitPitch = 0;
+  requestAnimationFrame(() => chs.forEach(el => { el.style.transitionDuration = ''; }));
+  document.documentElement.classList.remove('dip');
+}
 ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(t =>
   addEventListener(t, cancelDemo, { passive: true }));
 
@@ -1093,7 +1309,13 @@ function frame(now) {
   }
 
   // ---- the self-running demo
-  if (demo.on) {
+  // (the loop's dip: back to 00 once the canvas is dark, or let go at once if the
+  // visitor took over mid-dip, so the canvas is never left dark)
+  if (loopT && (!demo.on || now - loopT > 600 || (now - loopT > 200 && +getComputedStyle(canvas).opacity < 0.01))) {
+    if (demo.on) loopBack();
+    else { loopT = 0; document.documentElement.classList.remove('dip'); }
+  }
+  if (demo.on && !loopT) {
     // the hold on the closed engine counts from its first full frame, not from while
     // its shaders were still compiling behind the curtain
     if (post.ready) demo.idle += dt;
@@ -1113,7 +1335,10 @@ function frame(now) {
       // holds the closed engine again). It used to stop a pixel short, which read
       // as the tail of chapter 03, so chapter 04 never showed.
       const end = document.documentElement.scrollHeight - innerHeight;
-      if (demo.y >= end) { demo.y = end; demo.hold += dt; if (demo.hold > 8) { demo.y = 0; demo.hold = 0; demo.idle = 0; } }
+      if (demo.y >= end) {
+        demo.y = end; demo.hold += dt;
+        if (demo.hold > 8) { loopT = now; document.documentElement.classList.add('dip'); }
+      }
       scrollTo({ top: demo.y, behavior: 'instant' });
       readScroll();
       applyChapter();
@@ -1127,7 +1352,10 @@ function frame(now) {
       $('#v-throttle').textContent = Math.round(eng.throttle * 100);
     }
   } else {
-    demo.idle += dt;
+    // A held pedal (one pointerdown, or Space without auto-repeat), an open
+    // throttle the visitor set, or a drag in progress is someone still driving:
+    // the demo does not come back and take the throttle out of their hand.
+    demo.idle = pedalHeld || eng.throttle > 0.001 || drag.on ? 0 : demo.idle + dt;
     if (demo.idle > 26 && !reduceMotion) {                // pick the story back up
       demo.on = true; demo.y = scrollY; demo.idle = 0; demo.phase = 0;
       focusCyl = -1;                                      // and lets go of a followed piston, so the copy comes back
@@ -1139,10 +1367,22 @@ function frame(now) {
   } else {
     // Presented in slow motion. At a true 866 rpm the crank turns 14 times a
     // second, which is correct and completely unreadable — you cannot see a
-    // slider-crank at that rate. The telemetry still reports true speed; only
-    // the mechanism's angular rate is scaled.
+    // slider-crank at that rate. The whole plant runs at SLOWMO: the crank, and
+    // with it how fast the speed climbs and falls. The figures are the true values
+    // of the state on screen; they change at the same slowed rate.
+    // The rev limiter is a fuel cut, applied here because Engine.step does not act
+    // on its own `firing` flag: above the redline the throttle is closed for the
+    // step, sim.js's overrun branch then cuts the fuel (load 0), and the visitor's
+    // throttle is handed back once the speed is under the redline again. Without it
+    // a held throttle sat 260 rpm over the redline, above the stated peak power.
     let acc = dt * SLOWMO;
-    while (acc > 0) { eng.step(Math.min(1 / 240, acc)); acc -= 1 / 240; }
+    while (acc > 0) {
+      const held = eng.throttle, cut = eng.rpm > SPEC.redline;
+      if (cut) eng.throttle = 0;
+      eng.step(Math.min(1 / 240, acc));
+      if (cut) eng.throttle = held;
+      acc -= 1 / 240;
+    }
   }
 
   updateEngine(E, eng.crank);
@@ -1171,9 +1411,13 @@ function frame(now) {
   SPH.setFromVector3(OFF);
   SPH.theta += orbitYaw;
   SPH.phi = clamp(SPH.phi - orbitPitch, 0.25, Math.PI * 0.86);
-  if (focusCyl >= 0) SPH.radius *= 0.80;
+  // following a piston, the camera moves in toward its cylinder with the copy's
+  // fade rather than jumping there on the click (and back out the same way)
+  if (focusCyl >= 0) lastFocus = focusCyl;
+  const fk = lastFocus >= 0 ? focusAmt : 0;
+  SPH.radius *= 1 - 0.2 * fk;
   camera.position.copy(camLook).add(OFF.setFromSpherical(SPH));
-  if (focusCyl >= 0) camera.position.lerp(V(E.CYL_X[focusCyl], E.DECK - 0.045, 0.02), 0.18);
+  if (fk > 0.001) camera.position.lerp(V(E.CYL_X[lastFocus], E.DECK - 0.045, 0.02), 0.18 * fk);
   camera.lookAt(camLook);
   holdInStage();
 
@@ -1277,6 +1521,9 @@ window.__chapter = () => chapter;
 window.__E = E;
 window.__camera = camera;
 window.__stages = () => STAGES.map(s => [s.x0, s.y0, s.x1, s.y1].map(Math.round));
+window.__free = () => FREE.map(s => [s.x0, s.y0, s.x1, s.y1].map(Math.round));
+window.__focus = () => ({ amt: +focusAmt.toFixed(2), cyl: focusCyl, aside: ASIDE.map(a => +a.toFixed(2)) });
+window.__obst = i => OBST[i].slice(0, -3).map(b => [b.left, b.top, b.right, b.bottom].map(Math.round));
 window.__cam = () => ({ pos: camPos.toArray().map(n => +n.toFixed(3)), look: camLook.toArray().map(n => +n.toFixed(3)), yaw: +orbitYaw.toFixed(3), pitch: +orbitPitch.toFixed(3), focus: focusCyl, MID: MID.toArray().map(n => +n.toFixed(3)), REACH: +REACH.toFixed(3) });
 console.log('[SITE] imep', (imep() / 1e5).toFixed(2), 'bar | peak', peakTorque().nm.toFixed(0),
   'Nm at', peakTorque().rpm, '| power', peakPower().kw.toFixed(1), 'kW at', peakPower().rpm);

@@ -73,13 +73,21 @@ export function makeEmbers(SPEC, DECK, CYL_X, count = 420) {
   });
   const points = new THREE.Points(geo, mat);
   points.frustumCulled = false;
+  // Retired: sparks rising off an engine on a stand read as game effects, and they
+  // undercut the one claim that matters, that this is a real object. The glow in
+  // the chamber and the heat in the header carry the combustion on their own.
+  points.visible = false;
   return { object: points, material: mat };
 }
 
 // ---------------------------------------------------------------- dust
 // Slow, cool, and only visible where the light catches it. This is the shot's
 // cheapest depth cue: without it a dark scene has no air in it.
+// A few dozen motes, not a field of them: lit points on black read as stars. They
+// are drawn as a lens sees dust out of its plane of focus, large, soft and faint,
+// so they read as air in a studio rather than as something in the scene.
 export function makeDust(count = 900, extent = 1.1) {
+  count = Math.min(count, 60);
   const pos = new Float32Array(count * 3);
   const seed = new Float32Array(count);
   for (let i = 0; i < count; i++) {
@@ -105,19 +113,26 @@ export function makeDust(count = 900, extent = 1.1) {
         p.z += sin(uTime * 0.05 + aSeed * 61.0) * 0.03;
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         gl_Position = projectionMatrix * mv;
-        gl_PointSize = clamp((0.9 + aSeed * 1.5) * uPixel / max(0.05, -mv.z), 0.0, 5.0);
+        // out of focus: the disc grows with distance from the engine's plane
+        float blur = abs(-mv.z - 1.1) * 18.0 + 6.0;
+        float ps = clamp((0.6 + aSeed * 0.8) * blur * uPixel / max(0.05, -mv.z), 3.0, 46.0 * uPixel);
+        gl_PointSize = ps;
         // brightest in the middle of the volume, where the shaft is
         // Only near the key light's volume, and faint: after the sRGB encode a full
         // field of motes read as a starfield.
         float rad = length(p.xz) / ${extent.toFixed(2)};
         vA = 0.35 * (1.0 - smoothstep(0.15, 0.7, rad)) * (0.4 + 0.6 * aSeed);
+        // and fainter the larger the disc: the same light spread over more of it
+        vA *= 6.0 / max(6.0, ps / max(uPixel, 0.1));
       }`,
     fragmentShader: `
       precision highp float;
       varying float vA;
       void main(){
-        float a = smoothstep(0.5, 0.0, length(gl_PointCoord - 0.5));
-        gl_FragColor = vec4(vec3(0.62, 0.70, 0.82), a * vA * 0.5);
+        // a soft disc with a faintly brighter rim, the way defocused highlights draw
+        float r = length(gl_PointCoord - 0.5) * 2.0;
+        float a = (1.0 - smoothstep(0.75, 1.0, r)) * (0.55 + 0.45 * smoothstep(0.3, 0.95, r));
+        gl_FragColor = vec4(vec3(0.62, 0.68, 0.76), a * vA * 0.10);
       }`,
   });
   const points = new THREE.Points(geo, mat);

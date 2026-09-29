@@ -19,7 +19,7 @@
 <body>
 <a class="skip" href="#readout">Skip to the readout</a>
 
-<canvas id="view" role="img" aria-label="A four-stroke inline-four built in code, turning under a studio light that is also built in code. Scrolling cuts it open, and the glow that moves inside follows whichever cylinder is firing."></canvas>
+<canvas id="view" role="img" aria-label="A four-stroke inline-four built in code, turning under a studio light that is also built in code. Scrolling cuts it open; once it is open, the glow that moves inside follows whichever cylinder is firing."></canvas>
 
 <!-- ─────────────────────────────────────────────────── fixed furniture -->
 <header class="topbar">
@@ -42,7 +42,8 @@
   <a class="topbar-link" href="https://realmsystems.net/3d" target="_top">3D product sites <span aria-hidden="true">↗</span></a>
 </header>
 
-<p class="vert" aria-hidden="true">A0021&thinsp;/&thinsp;FS &mdash; 2.0&thinsp;L INLINE FOUR</p>
+<!-- filled from sim.js's SPEC at load, like every other figure on the page -->
+<p class="vert" aria-hidden="true" data-spec="rail"></p>
 
 <!-- ─────────────────────────────────────────────────── chapter copy -->
 <div class="story">
@@ -51,8 +52,8 @@
     <h1>A machine, <br>not a&nbsp;picture.</h1>
     <p class="lede">A four-stroke engine built from nothing but code, turning in the dark.
       There is no model file here and there is no texture. Every surface is a
-      number, lit by a studio built in the same code. The glow that moves inside
-      follows whichever cylinder is firing.</p>
+      number, lit by a studio built in the same code. Once it is cut open, the
+      glow inside follows whichever cylinder is firing.</p>
   </article>
 
   <article class="chapter">
@@ -97,17 +98,19 @@
     <div><span>Power</span><b id="v-power">&mdash;</b><small>kW</small></div>
   </div>
   <i class="bar"><u id="v-bar"></u></i>
-  <!-- The mechanism is slowed so it can be seen; the figures are not. Said beside
+  <!-- The whole machine runs slowed so it can be seen, the speed's rise and fall
+       with it; the figures are the true values of the state on screen. Said beside
        the figures, because a slowly turning crank next to 2,700 rpm looks fake. -->
-  <p class="ro-slow"><span class="when-run"><span class="nw">Mechanism shown in slow motion &middot;</span> <span class="nw">figures are true speed</span></span><span class="when-held"><span class="nw">Frozen &middot; figures held &middot;</span> <span class="nw">drag to turn the crank</span></span></p>
-  <!-- First row: live. Second row: what the engine map gives at full load for the
-       compression ratio set, keyed as such, because IMEP and peak pressure do not
-       move with the throttle and must not sit among the live figures as if they did. -->
+  <p class="ro-slow"><span class="when-run"><span class="nw">Shown in slow motion &middot;</span> <span class="nw">figures are the true values</span></span><span class="when-held"><span class="nw">Frozen &middot; figures held &middot;</span> <span class="nw">drag to turn the crank</span></span></p>
+  <!-- First row: live. Second row: the indicator diagram in the cam card, one
+       cylinder at a full atmospheric charge for the compression ratio set, keyed as
+       such: IMEP and peak pressure do not move with the throttle, and the running
+       engine, whose volumetric efficiency is always under 1, never quite reaches them. -->
   <div class="ro-grid">
     <div><span>Crank</span><b id="v-crank">&mdash;</b></div>
     <div><span>Air/fuel</span><b id="v-af">&mdash;</b></div>
     <div><span>Fuel use</span><b id="v-bsfc">&mdash;</b><small>g/kWh</small></div>
-    <div class="ro-key"><span>Full load</span><small>at this ratio</small></div>
+    <div class="ro-key"><span>Diagram</span><small>full charge</small></div>
     <div><span>IMEP</span><b id="v-imep">&mdash;</b><small>bar</small></div>
     <div><span>Peak cyl</span><b id="v-peakp">&mdash;</b><small>bar</small></div>
   </div>
@@ -165,13 +168,14 @@
     <div><dt><i class="sw sw-pr"></i>Pressure</dt><dd id="ev-sp">&mdash;</dd></div>
     <div><dt><i class="sw sw-pi"></i>Piston</dt><dd id="ev-pi">&mdash;</dd></div>
   </dl>
-  <canvas id="chart" class="chart" role="img" aria-label="Power against crank speed for the current compression ratio."></canvas>
-  <p class="cap">Power, kW, against crank speed. The shape falls out of compression,
-    combustion, friction and volumetric efficiency arguing with each other.</p>
+  <canvas id="chart" class="chart" role="img" aria-label="Power at full load against crank speed for the current compression ratio, with a dot at the speed and power the engine is making now."></canvas>
+  <p class="cap">Power at full load, kW, against crank speed; the dot is the engine
+    now. The shape falls out of compression, combustion, friction and volumetric
+    efficiency arguing with each other.</p>
 </aside>
 
 <p class="cue" aria-hidden="true"><span>Scroll</span><i></i></p>
-<p class="stamp">Geometry built in code from the simulation's own numbers &middot; bore <span data-spec="bore">86.0</span> &times; stroke <span data-spec="stroke">86.0</span> mm &middot; naturally aspirated &middot; mechanism shown in slow motion, telemetry is true speed</p>
+<p class="stamp">Geometry built in code from the simulation's own numbers &middot; bore <span data-spec="bore">86.0</span> &times; stroke <span data-spec="stroke">86.0</span> mm &middot; naturally aspirated &middot; shown in slow motion, the figures are the true values</p>
 
 <!-- ─────────────────────────────────────────────────── scroll track -->
 <div class="track" aria-hidden="true">
@@ -179,5 +183,21 @@
 </div>
 
 <div class="boot" id="boot" role="status"><span>Building the engine</span></div>
+<!-- If a script cannot be fetched, or the engine is still not built after 15 s,
+     the curtain says so and offers a reload instead of saying "Building" forever.
+     (site.js lifts and removes the curtain itself once the first frame is drawn.) -->
+<script>
+(function () {
+  var fail = function () {
+    var b = document.getElementById('boot');
+    if (!b || window.__ready === true || b.classList.contains('failed')) return;
+    b.classList.add('failed');
+    b.innerHTML = '<span>The engine did not load. <a href="">Reload</a></span>';
+  };
+  // a script that failed to arrive, or an exception thrown before the first frame
+  addEventListener('error', function (e) { var t = e.target; if (t === window || (t && t.tagName === 'SCRIPT')) fail(); }, true);
+  setTimeout(fail, 15000);
+})();
+</script>
 </body>
 </html>

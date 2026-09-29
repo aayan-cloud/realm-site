@@ -36,6 +36,13 @@ a { color: inherit; text-decoration: none }
 .skip:focus { top: 12px }
 
 #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; touch-action: pan-y }
+/* The self-running demo's loop from 04 back to 00 (site.js): the engine and the
+   copy dip to the ground in a quarter of a second, the page is put back to 00 while
+   it is dark, and the closed engine fades up with its headline already in. Scrolled
+   back in the light, the section closed in reverse and the accessories came back
+   see-through over half a second of cut paint and no headline. */
+#view, .story { transition: opacity .5s var(--ease) }
+html.dip #view, html.dip .story, html.dip .camcard { opacity: 0; transition: opacity .25s ease-in }
 
 /* the scroll track: five screens of nothing, purely to give the story length */
 .track { position: relative; z-index: 1; pointer-events: none }
@@ -80,8 +87,10 @@ a { color: inherit; text-decoration: none }
 .vert {
   position: fixed; z-index: 5; left: clamp(10px, 1.1vw, 18px); top: 50%;
   transform: rotate(180deg) translateY(50%); writing-mode: vertical-rl;
-  margin: 0; font: 400 10px var(--mono); letter-spacing: .34em;
-  text-transform: uppercase; color: var(--bone-3); pointer-events: none;
+  margin: 0; letter-spacing: .3em; text-transform: uppercase; color: var(--bone-2); pointer-events: none; white-space: nowrap;
+  /* the sans, not the mono: at this size the mono's dotted zero read as an 8, and
+     "A0021 / 2.0 L" came out as "A8821 / 2.8 L" */
+  font: 500 10.5px var(--sans); font-variant-numeric: lining-nums;
 }
 
 /* ================================================================= story */
@@ -174,8 +183,12 @@ a { color: inherit; text-decoration: none }
 
 .ro-note { margin: 0 0 8px; font: 400 10px var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--bone-3) }
 
-.hint { position: fixed; z-index: 5; left: 50%; bottom: 28px; transform: translateX(-50%); margin: 0; white-space: nowrap; font: 400 10.5px/1.6 var(--mono); letter-spacing: .04em; color: var(--bone-3); pointer-events: none; opacity: 0; transition: opacity .5s var(--ease) }
-.hint.show { opacity: 1 }
+.hint { position: fixed; z-index: 5; left: 50%; bottom: 28px; transform: translateX(-50%); margin: 0; white-space: nowrap; font: 400 10.5px/1.6 var(--mono); letter-spacing: .04em; color: var(--bone-3); pointer-events: none; opacity: 0; transition: opacity .2s var(--ease) }
+/* The hint and the scroll cue share the bottom centre and hand over the way the
+   chapter copy does: the outgoing one goes in a fifth of a second and the incoming
+   one waits a third of a second, so the two are never half up on top of each other
+   (a cross-fade read "Drag to turn SCROLL ck a piston"). */
+.hint.show { opacity: 1; transition: opacity .5s var(--ease) .3s }
 /* a close-up runs the block off the bottom of the screen, under where the hint and
    the stamp sit, so they step aside for it (site.js sets body.crop) */
 body.crop .hint.show, body.crop .stamp { opacity: 0 }
@@ -230,9 +243,9 @@ input[type=range]:focus-visible::-webkit-slider-thumb { background: var(--bone) 
 .sw-pr { height: 7px; background: rgba(255, 120, 50, .30); border-top: 1px solid rgba(255, 140, 70, .9) }
 
 /* ================================================================= furniture */
-.cue { position: fixed; z-index: 5; left: 50%; bottom: 26px; transform: translateX(-50%); margin: 0; display: flex; align-items: center; gap: 12px; font: 400 10.5px var(--mono); letter-spacing: .28em; text-transform: uppercase; color: var(--bone-3); pointer-events: none; transition: opacity .5s var(--ease) }
+.cue { position: fixed; z-index: 5; left: 50%; bottom: 26px; transform: translateX(-50%); margin: 0; display: flex; align-items: center; gap: 12px; font: 400 10.5px var(--mono); letter-spacing: .28em; text-transform: uppercase; color: var(--bone-3); pointer-events: none; transition: opacity .5s var(--ease) .3s }
 .cue i { display: block; width: 54px; height: 1px; background: linear-gradient(90deg, var(--bone-3), transparent) }
-.cue.gone { opacity: 0 }
+.cue.gone { opacity: 0; transition: opacity .2s var(--ease) }
 .ro-slow { margin: -4px 0 12px; font: 400 10px/1.45 var(--mono); letter-spacing: .04em; color: var(--bone-3) }
 .ro-slow span { font: inherit; letter-spacing: inherit; text-transform: none; color: inherit }
 .ro-slow .nw { white-space: nowrap }
@@ -263,6 +276,9 @@ input[type=range]:focus-visible::-webkit-slider-thumb { background: var(--bone) 
 .boot.gone { opacity: 0; pointer-events: none }
 /* the line goes at once, so it never ghosts across the engine as the curtain fades */
 .boot.gone span { animation: none; opacity: 0 }
+/* nothing is being built any more: the line holds still and offers a reload */
+.boot.failed span { animation: none; color: var(--bone-2); letter-spacing: .16em }
+.boot.failed a { color: var(--ember); text-decoration: underline; text-underline-offset: 3px; margin-left: .6em }
 
 /* ================================================================ responsive */
 /* Under 1180px the hint drops its last clause and fits between the pedal and the
@@ -290,12 +306,14 @@ input[type=range]:focus-visible::-webkit-slider-thumb { background: var(--bone) 
   .lab { margin: 8px 0 4px }
   .camcard { top: 70px }
   .camcard .chart + .cap { display: none }
-  .camcard h2 { margin-bottom: 8px }
+  .camcard { padding-bottom: 10px }
+  .camcard h2 { margin-bottom: 6px }
   /* following a piston, its line replaces the title rather than wrapping under it
      and pushing the card down into the readout */
   .camcard.focused .cc-title { display: none }
-  .chart { height: 42px; margin-top: 10px }
-  #diagram { height: 118px }
+  /* the curve's own label takes the top of the chart (site.js, drawChart) */
+  .chart { height: 46px; margin-top: 8px }
+  #diagram { height: 112px }
   .events { margin-top: 8px; gap: 1px }
   .events dt, .events dd { line-height: 14px }
   .readout { width: 268px }
@@ -328,6 +346,17 @@ input[type=range]:focus-visible::-webkit-slider-thumb { background: var(--bone) 
   .lede .wide { display: none }
   .lede .narrow { display: inline }
 }
+/* Upright phones: the controls and figures sit over the floor the engine stands on,
+   so a scrim from the top of the controls down (site.js measures it) keeps their
+   text on near-black however the floor is lit. Not in the small frame, where the
+   engine runs down beside the pedal. */
+@media (max-width: 900px) and (min-height: 481px) {
+  body::after {
+    content: ''; position: fixed; z-index: 3; left: 0; right: 0; bottom: 0; height: var(--scrim, 0px);
+    background: linear-gradient(rgba(7, 7, 10, 0), rgba(7, 7, 10, .84) 22px, rgba(7, 7, 10, .92));
+    pointer-events: none;
+  }
+}
 /* Short phones held upright (360x640, 375x667): tighter copy, and the compression
    ratio gives its row to the engine. Without it the clear band for the machine
    was under a fifth of the screen. */
@@ -344,8 +373,15 @@ input[type=range]:focus-visible::-webkit-slider-thumb { background: var(--bone) 
   .topbar-link, .mark-tag { display: none }
 }
 
-/* Framed on the Realm Systems site: that page is the one this link points to. */
-html.framed .topbar-link { display: none }
+/* Framed on the Realm Systems 3D page, that page is the one this link points to;
+   framed on another Realm page (the home page), it leads there (site.js, link3d). */
+html.framed:not(.link3d) .topbar-link { display: none }
+/* Framed, a desktop browser's 15px scrollbar ran down the right edge inside the
+   host's drawn screen, which read as a raw embed rather than a device. The chapter
+   nav and the scroll cue already say where the visitor is. (site.js measures the
+   stage from the canvas, so a standalone scrollbar is taken off the width too.) */
+html.framed { scrollbar-width: none }
+html.framed::-webkit-scrollbar { display: none }
 
 /* Very short viewports: the 340x230 frame on a phone, and phones held sideways.
    The engine, one line and the chapter nav, rather than a squashed desktop. */
@@ -368,6 +404,8 @@ html.framed .topbar-link { display: none }
    the engine gets the whole right side at full height instead of a strip under a
    full-width title. */
 @media (max-height: 480px) and (max-width: 599px) {
+  /* the readout it skips to is not shown here, and the link covered the headline */
+  .skip { display: none }
   .topbar { height: 34px; padding: 0 10px }
   .story { left: 10px; right: auto; width: 40%; top: 40px }
   .story h1, .story h2 { font-size: 16px; line-height: 1.18; white-space: normal; overflow: visible }
@@ -375,6 +413,13 @@ html.framed .topbar-link { display: none }
   .controls > :not(.ctl-row), .ctl-side { display: none }
   .ctl-row { margin: 0 }
   .pedal { width: auto; flex-direction: row; gap: 7px; padding: 7px 10px }
+  /* On 04, "Nothing here is a picture of a number", the live figures it means sit
+     under the headline in the copy's own column, so the engine keeps its side. */
+  html.at4 .readout { display: block; left: 10px; right: auto; top: auto; bottom: 52px; width: 38%; text-align: left }
+  html.at4 .readout .ro-grid, html.at4 .readout .bar, html.at4 .ro-slow, html.at4 .ro-top span { display: none }
+  html.at4 .ro-top { display: flex; flex-direction: column; gap: 3px }
+  html.at4 .ro-top div { flex-direction: row; align-items: baseline; gap: 5px }
+  html.at4 .ro-top b { font-size: 15px }
 }
 /* sideways phones have the width for the pedal and the three live figures */
 @media (max-height: 480px) and (min-width: 600px) {

@@ -49,13 +49,15 @@ export class Post {
     this.bloomStrength = opts.bloom ?? 0.85;
     this.grain = opts.grain ?? 0.03;
     this.vignette = opts.vignette ?? 0.62;
-    this.aberration = opts.aberration ?? 0.0016;
+    this.aberration = opts.aberration ?? 0;
     this.exposure = 1.0;
     this.enabled = true;
     this.aoEnabled = opts.ao ?? true;
     this.sceneInfo = { calls: 0, triangles: 0 };
     this.ready = false;             // true once a full engine frame has been drawn
     this.renderScale = 1;
+    this.govScale = 1;            // what the governor has stepped down to
+    this.pixelBudget = opts.pixelBudget ?? 2.6e6;
     this.quality = 'full';
 
     const coarse = matchMedia('(pointer: coarse)').matches;
@@ -107,8 +109,8 @@ export class Post {
         fragColor = vec4(vec3(pow(occ, uPower)), 1.0);
       }`, {
       tDepth: { value: this.depthTexture }, uProjInv: { value: new THREE.Matrix4() },
-      uTexel: { value: new THREE.Vector2() }, uRadius: { value: 0.025 }, uBias: { value: 0.002 },
-      uIntensity: { value: 0.9 }, uPower: { value: 1.4 }, uProjScale: { value: 500 },
+      uTexel: { value: new THREE.Vector2() }, uRadius: { value: 0.032 }, uBias: { value: 0.002 },
+      uIntensity: { value: 1.6 }, uPower: { value: 1.5 }, uProjScale: { value: 500 },
       tDiffuse: { value: null },
     });
     // depth-aware blur, so occlusion does not bleed across silhouettes
@@ -163,12 +165,14 @@ export class Post {
         vec2 uv = vUv;
         vec2 d = uv - 0.5;
         float r2 = dot(d, d);
-        // chromatic aberration, scaled by distance from centre like a real lens
-        vec2 off = d * uAberr * (0.35 + r2 * 3.0);
-        vec3 col;
-        col.r = texture(tDiffuse, uv + off).r;
-        col.g = texture(tDiffuse, uv).g;
-        col.b = texture(tDiffuse, uv - off).b;
+        // chromatic aberration, scaled by distance from centre like a real lens (off
+        // by default: over fine surface detail it fringed every bright edge)
+        vec3 col = texture(tDiffuse, uv).rgb;
+        if (uAberr > 0.0) {
+          vec2 off = d * uAberr * (0.35 + r2 * 3.0);
+          col.r = texture(tDiffuse, uv + off).r;
+          col.b = texture(tDiffuse, uv - off).b;
+        }
         col *= mix(1.0, texture(tAO, uv).r, uUseAO);
         col += texture(tBloom, uv).rgb * uBloom;
         col *= uExposure;
@@ -207,22 +211,30 @@ export class Post {
   // least: occlusion off, then the scene pass drawn at 80 %, then at 65 %, with
   // the composite scaling it back up. It never steps back up, so it cannot hunt.
   // Hidden tabs and hitches are ignored: only intervals under 250 ms count.
+  // Its first look comes 0.6 s after the first full frame, so a device that cannot
+  // hold the start tier drops it inside the first second, not the first five;
+  // after that it waits 1.5 s between steps.
   _govern(now) {
     const dt = this._last ? now - this._last : 0;
     this._last = now;
     if (!(dt > 0 && dt < 250)) return;
-    this._ema = this._ema ? this._ema * 0.95 + dt * 0.05 : dt;
+    this._ema = this._ema ? this._ema * 0.9 + dt * 0.1 : dt;
     this._since = (this._since || 0) + dt;
-    if (this._since < 2000 || this._ema < 24) return;            // under ~42 fps for 2 s
-    this._since = 0;
+    if (this._since < (this._stepped ? 1500 : 600) || this._ema < 21) return;     // under ~48 fps
+    this._since = 0; this._stepped = true;
     if (this.aoActive) { this.aoEnabled = false; this.aoActive = false; this.quality = 'no-ao'; return; }
-    const next = this.renderScale > 0.9 ? 0.8 : this.renderScale > 0.7 ? 0.65 : 0;
-    if (next && this._size) { this.renderScale = next; this.quality = 'scale-' + next; this.setSize(...this._size); }
+    const next = this.govScale > 0.9 ? 0.8 : this.govScale > 0.7 ? 0.65 : 0;
+    if (next && this._size) { this.govScale = next; this.quality = 'scale-' + next; this.setSize(...this._size); }
   }
 
+  // The start tier comes from the pixel count: the scene pass is held to a budget
+  // of pixels (the composite scales it back up), so a big window on a dense screen
+  // starts where it can hold its frame rate instead of stepping down on screen.
   setSize(w, h, dpr) {
     this._size = [w, h, dpr];
-    const s = this.renderScale;
+    const px = Math.max(1, w * h * dpr * dpr);
+    this.budgetScale = Math.max(0.6, Math.min(1, Math.sqrt(this.pixelBudget / px)));
+    const s = this.renderScale = Math.min(this.govScale, this.budgetScale);
     const W = Math.max(1, Math.floor(w * dpr * s)), H = Math.max(1, Math.floor(h * dpr * s));
     this.rtScene.setSize(W, H);
     this.depthTexture.image.width = W; this.depthTexture.image.height = H;

@@ -104,6 +104,14 @@ const MAIN = /* glsl */`
   // the section paint is a quad that moves with the plane: its grain is fixed to
   // the engine (world space) instead, so it does not slide as the cut sweeps
   vec3 rhP = rhOnCut ? vRhW : vRhP;
+  // Wrinkle paint reads the same octaves on a turned and warped copy of the part's
+  // space: a value-noise lattice left axis-aligned read as a brick grid (a
+  // perforated grille) on the cam cover. Turned off the axes and bent by a few
+  // cheap sines, its contours wander like the ridges a wrinkle finish cures into.
+  if (rhK == 3) {
+    rhP = mat3(0.788, -0.380, 0.484, 0.566, 0.738, -0.367, -0.218, 0.557, 0.802) * rhP;
+    rhP += 0.0022 * sin(rhP.yzx * 410.0 + vec3(1.3, 4.1, 2.7)) + 0.0011 * sin(rhP.zxy * 1130.0 + vec3(0.2, 3.3, 5.1));
+  }
   float rhC = uRhA.x;
   float rhFw = max(length(fwidth(rhP)), 1e-7);
   vec3 rhNo = normalize(cross(dFdx(vRhP), dFdy(vRhP)));
@@ -120,19 +128,45 @@ const MAIN = /* glsl */`
   float rhH = 0.0, rhR = 0.0, rhS = 0.0, rhD = 0.0;
   vec3 rhTint = vec3(1.0);
   vec3 rhE = vec3(0.0);
-  if (rhK == 1 || rhK == 3 || rhK == 9) {
-    // cast: three octaves of value noise, plus sparse darker speckle cells
+  if (rhK == 3) {
+    // wrinkle: soft crinkles along the zero contours of two warped octaves, in
+    // the normal and the sheen only (the crests a touch glossier than the
+    // valleys). A crinkle line is much finer than the noise it follows, so each
+    // octave is let go well before its period gets near a pixel: past that it only
+    // sparkles, and a wrinkle finish seen from a metre reads as an even satin.
+    float wv1 = smoothstep(3.0, 7.0, 2.2 * rhC / rhFw), wv2 = smoothstep(3.0, 7.0, rhC / rhFw);
+    float w1 = 1.0 - smoothstep(0.0, 0.30, abs(n1));
+    float w2 = 1.0 - smoothstep(0.0, 0.34, abs(n2));
+    rhH = (w1 * 0.7 * wv1 + w2 * 0.35 * wv2) + n0 * 0.2 * f0;
+    rhR = uRhA.y * (0.35 * n0 - 0.6 * w1 * wv1 - 0.3 * w2 * wv2);
+    rhD = nM * 0.02;
+  } else if (rhK == 1) {
+    // Sand casting: a fine granular stipple, not a cloud. The cell is about half a
+    // millimetre (the grain of the sand the mould was rammed from), so the three
+    // octaves run at roughly 3, 1.1 and 0.5 mm. Each grain octave is held until it
+    // is about a pixel across, and as it goes below that its scatter moves into the
+    // roughness, so from a metre away the skin reads as dense and matte instead of
+    // going smooth. The broad mottle is almost gone: louder, it read as water
+    // stains on a sheet. Sparse dark pits (gas porosity) sit in the grain.
+    float g1 = smoothstep(0.7, 1.8, 2.2 * rhC / rhFw), g2 = smoothstep(0.7, 1.8, rhC / rhFw);
+    float b1 = 0.5 - abs(n1), b2 = 0.5 - abs(n2);
+    rhH = n0 * f0 * 0.22 + b1 * g1 * 0.55 + b2 * g2 * 0.45;
+    rhR = uRhA.y * (n0 * 0.25 + n1 * 0.55 * g1 + n2 * 0.45 * g2) + 0.05 * (1.0 - g2) + 0.03 * (1.0 - g1);
+    rhS = uRhA.w * smoothstep(0.82, 0.92, nS) * smoothstep(0.5, 1.5, 1.7 * rhC / rhFw);
+    rhD = 0.05 * n1 * g1 + 0.06 * n2 * g2 + nM * 0.008;
+  } else if (rhK == 9) {
+    // forging: three octaves of value noise, plus sparse darker speckle cells
     rhH = n0 * f0 * 0.3 + n1 * f1 * 0.35 + n2 * f2 * 0.25;
-    rhR = uRhA.y * (n0 * 0.9 + n1 * 0.55 * f1 + n2 * 0.35 * f2);
+    // (the broad octave kept low in the sheen and the value: louder, it laid cloudy
+    // stains over the block, which read as a dirty galvanised sheet, not a casting)
+    rhR = uRhA.y * (n0 * 0.45 + n1 * 0.55 * f1 + n2 * 0.35 * f2);
     // speckle only where it resolves; below that it is noise, not texture
     rhS = uRhA.w * smoothstep(0.80, 0.90, nS) * f1;
-    rhD = nM * 0.05;
-    if (rhK == 9) {
-      // forging: scale laid in streaks along the grain, read in the highlight
-      float fs = rhVis(0.0007, rhFw);
-      rhR += uRhB.x * nA * fs;
-      rhD += uRhB.y * nA * fs;
-    }
+    rhD = nM * 0.022;
+    // scale laid in streaks along the grain, read in the highlight
+    float fs = rhVis(0.0007, rhFw);
+    rhR += uRhB.x * nA * fs;
+    rhD += uRhB.y * nA * fs;
   } else if (rhK == 2 || rhK == 10) {
     // turned: rings round the part axis. On a cylinder they run round it; on a
     // face they run in circles. Roughness only, like a fine lathe finish.
@@ -143,13 +177,18 @@ const MAIN = /* glsl */`
     rhR = uRhA.y * (0.55 * sin(t * 3927.0) * g1 + 0.45 * sin(t * 1142.0 + n1 * 2.0) * g2);
     rhD = nM * 0.02;
     if (rhK == 10) {
-      // piston crown: faint turning, and carbon laid down toward the middle of the
-      // top, where the flame front has been
+      // piston crown: the top is matte cast alloy, not a mirror (polished, it
+      // swirled the studio round in every crown), with carbon laid down toward the
+      // middle where the flame front has been: patchy, thickest in the centre, and
+      // a darker tide mark where the deposit ends
       float top = smoothstep(uRhB.y - 0.0008, uRhB.y, rhP.y);
-      float carbon = (1.0 - smoothstep(0.004, 0.036, rr)) * top;
-      rhTint *= mix(vec3(1.0), vec3(0.36, 0.33, 0.30), uRhB.x * carbon);
-      rhR += 0.22 * carbon * uRhB.x;
-      rhR *= 1.0 - 0.75 * top;
+      float patchy = 0.55 + 0.9 * (n0 + 0.6 * n1 * f1);
+      float carbon = clamp((1.0 - smoothstep(0.006, 0.030, rr)) * patchy, 0.0, 1.0) * top;
+      float tide = exp(-pow((rr - 0.029 - 0.004 * n0) / 0.0035, 2.0)) * top;
+      rhTint *= mix(vec3(1.0), vec3(0.30, 0.27, 0.24), uRhB.x * max(carbon, 0.55 * tide));
+      rhTint *= mix(vec3(1.0), vec3(0.93, 0.89, 0.84), top);
+      rhR = mix(rhR, 0.20 + 0.08 * n1 * f1 + 0.14 * carbon, top);
+      rhD += top * 0.05 * n2 * f2;
     }
   } else if (rhK == 4) {
     // plateau-honed bore: a +/-28 degree cross-hatch in the roughness and a little in value
@@ -219,10 +258,15 @@ vRhW = (modelMatrix * rhWp).xyz;
 vRhUv = uv;`;
 
 // Clipping with coverage instead of a hard discard (see the note at the top).
+// The coverage ramp is a pixel wide on screen, which on a face seen edge-on (the
+// deck, the gasket, a floor inside the head) is many millimetres in depth: those
+// fragments stood in front of the painted cap and drew hairlines across it. The
+// ramp is held to 0.4 mm in depth, and the cap sits 0.3 mm proud of the plane
+// (caps.js), so nothing but the outline of the cut is softened.
 const CLIP = /* glsl */`
 #if NUM_CLIPPING_PLANES > 0
   float rhClipD = clippingPlanes[ 0 ].w - dot( vClipPosition, clippingPlanes[ 0 ].xyz );
-  float rhClipW = max( fwidth( rhClipD ), 1e-7 );
+  float rhClipW = clamp( fwidth( rhClipD ), 1e-7, 0.0004 );
   float rhCov = clamp( rhClipD / rhClipW + 0.5, 0.0, 1.0 );
   if ( rhCov <= 0.0 ) discard;
 #else
@@ -278,10 +322,35 @@ metalnessFactor = mix(metalnessFactor, 1.0, rhEdgeK);`)
 if (uRhA.z > 0.0) normal = rhPerturb(-vViewPosition, normal, rhH * uRhA.z, faceDirection);`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
 totalEmissiveRadiance += rhE;`)
-      .replace('#include <output_fragment>', '#include <output_fragment>\ngl_FragColor.a *= rhCov;');
+      .replace('#include <output_fragment>', SOFT_CLIP + '#include <output_fragment>\ngl_FragColor.a *= rhCov;');
   };
   return mat;
 }
+
+// Reflected light rolls off into a ceiling before the tone map. How high that
+// ceiling sits depends on how rough the surface is. A matte face (a casting, the
+// paint, a moulding) is held under 1.0, so a broad sheen turned square to the
+// softbox never goes to a white patch. A ground or polished face (a journal, a
+// pin, a lobe, a chamfer on a bolt) is let through almost to white, the way a
+// photograph of machined steel clips on its glints: held under 1.0 as well, every
+// highlight in the frame stopped at about 88 % and the steel read as grey paint.
+// What a part emits (the hot header, a glowing exhaust valve) is left out of the
+// knee: the bloom is theirs.
+const SOFT_CLIP = /* glsl */`
+{
+  vec3 rhRef = max(outgoingLight - totalEmissiveRadiance, vec3(0.0));
+  float rhPk = max(rhRef.r, max(rhRef.g, rhRef.b));
+  const float rhK0 = 0.52;
+  // ...and on how fast the surface turns under the pixel: a glint is a light
+  // caught on a curve (a journal, a pulley rim, a rounded edge), so a flat face
+  // squared up to a softbox (a sprocket face, a machined flange) stays below
+  // white while the rim round it clips
+  float rhCurv = length(fwidth(vNormal));
+  float rhK1 = mix(0.96, mix(9.0, 0.96, smoothstep(0.18, 0.46, roughnessFactor)), smoothstep(0.004, 0.02, rhCurv));
+  if (rhPk > rhK0) rhRef *= (rhK0 + (rhK1 - rhK0) * (1.0 - exp(-(rhPk - rhK0) / (rhK1 - rhK0)))) / rhPk;
+  outgoingLight = rhRef + totalEmissiveRadiance;
+}
+`;
 
 function std(name, hex, metal, rough, env = 1, extra = {}) {
   return new THREE.MeshStandardMaterial({ name, color: hex, metalness: metal, roughness: rough, envMapIntensity: env, ...extra });
@@ -292,22 +361,30 @@ export function makeMaterials() {
   const X = new THREE.Vector3(1, 0, 0), Y = new THREE.Vector3(0, 1, 0);
   const M = {
     // sand-cast aluminium: rough, speckled, slightly warm grey
-    cast: uber(std('cast_alloy', 0xa19f9b, 0.9, 0.46, 0.95), 'cast', { cell: 0.0012, rough: 0.06, bump: 0.0002, speck: 0.22, speckColor: 0x77756f }),
+    // (rough enough that a barrel bulge shows a broad sheen, not a polished tube)
+    cast: uber(std('cast_alloy', 0x9c9c9b, 0.9, 0.44, 1.0), 'cast', { cell: 0.00055, rough: 0.12, bump: 0.00018, speck: 0.30, speckColor: 0x5e5d5a }),
     // the same alloy on the floor of a cored cavity: darker, rougher, never polished
     // the intake manifold: a rougher, duller sand casting than the machined block
-    castIn: uber(std('cast_manifold', 0x8e8b86, 0.75, 0.6, 0.85), 'cast', { cell: 0.0015, rough: 0.08, bump: 0.00035, speck: 0.3, speckColor: 0x73706a }),
+    // cool silver-grey, as a cast manifold photographs; clay-beige before
+    castIn: uber(std('cast_manifold', 0x9e9e9d, 0.9, 0.46, 1.0), 'cast', { cell: 0.0006, rough: 0.12, bump: 0.0002, speck: 0.32, speckColor: 0x62615e }),
+    // die-cast alternator housings: brighter and finer than a sand casting
+    castAlt: uber(std('cast_alternator', 0xacadae, 0.9, 0.42, 1.0), 'cast', { cell: 0.0004, rough: 0.07, bump: 0.00006, speck: 0.16, speckColor: 0x7d7e80 }),
     // the head: the same alloy, cored by the ports
-    headCast: uber(std('cast_alloy', 0xa19f9b, 0.9, 0.46, 0.95), 'cast', { cell: 0.0012, rough: 0.06, bump: 0.0002, speck: 0.22, speckColor: 0x77756f, cored: true }),
-    castCore: uber(std('cast_core', 0x6d6c69, 0.75, 0.72, 0.7), 'cast', { cell: 0.0012, rough: 0.07, bump: 0.0002, speck: 0.3, speckColor: 0x4d4c49, cored: true }),
+    headCast: uber(std('cast_alloy', 0x9c9c9b, 0.9, 0.44, 1.0), 'cast', { cell: 0.00055, rough: 0.12, bump: 0.00018, speck: 0.30, speckColor: 0x5e5d5a, cored: true }),
+    // a combustion chamber: the same alloy under a film of carbon
+    chamber: uber(std('chamber', 0x4a4643, 0.6, 0.62, 0.8), 'cast', { cell: 0.0006, rough: 0.08, bump: 0.0001, speck: 0.35, speckColor: 0x2e2c2a, cored: true }),
+    castCore: uber(std('cast_core', 0x6d6c69, 0.75, 0.72, 0.7), 'cast', { cell: 0.0006, rough: 0.07, bump: 0.0001, speck: 0.3, speckColor: 0x4d4c49, cored: true }),
     // machined aluminium faces: deck, flanges, bearing bores
     machined: uber(std('machined_alloy', 0xaeb2b7, 0.9, 0.38, 1.0), 'turned', { rough: 0.06, axis: Y }),
     // plateau-honed iron liners photograph mid-grey, not black
     liner: uber(std('honed_liner', 0x8a8d91, 0.5, 0.42, 1.0), 'hone', { rough: 0.05 }),
     gasket: uber(std('mls_gasket', 0x2c2e31, 0.7, 0.42, 0.9), 'plain'),
     // forged crank webs: dark scale, rough, streaked along the grain
-    forged: uber(std('forged_web', 0x3c3f43, 1.0, 0.45, 1.1), 'forged', { cell: 0.0016, rough: 0.07, bump: 0.0005, speck: 0.3, speckColor: 0x2c2e31, b: [0.12, 0.10, 0, 0] }),
+    // (dark grey, about 0.1 linear, with a faint sheen: at 0.045 and fully metallic
+    // the counterweights read as black rubber pucks)
+    forged: uber(std('forged_web', 0x5b5e62, 0.55, 0.5, 1.1), 'forged', { cell: 0.0016, rough: 0.08, bump: 0.0005, speck: 0.3, speckColor: 0x45484c, b: [0.12, 0.10, 0, 0] }),
     // the turned counterweight rims and the ground thrust faces beside each journal
-    webTurned: uber(std('turned_web', 0x9ca0a5, 1.0, 0.26, 1.2), 'turned', { rough: 0.07, axis: X }),
+    webTurned: uber(std('turned_web', 0xc3c7cb, 1.0, 0.2, 1.2), 'turned', { rough: 0.06, axis: X }),
     journal: uber(std('ground_journal', 0xd0d3d6, 1.0, 0.2, 1.2), 'turned', { rough: 0.05, axis: X }),
     rod: uber(std('shot_peened_rod', 0x6f7378, 1.0, 0.44, 1.15), 'forged', { cell: 0.0006, rough: 0.06, bump: 0.00025, speck: 0.2, speckColor: 0x55585c, b: [0.05, 0.04, 0, 0] }),
     piston: uber(std('piston_alloy', 0xc3c6c9, 0.85, 0.35, 1.1), 'crown', { rough: 0.035, axis: Y, b: [0.85, 0.0283, 0, 0] }),
@@ -320,10 +397,12 @@ export function makeMaterials() {
     valveHot: uber(std('exhaust_valve', 0xd9dcdf, 1.0, 0.22, 1.2), 'valve', { speckColor: 0x5a534c, b: [0.25, 0, 0, 0] }),
     spring: uber(std('black_oxide_spring', 0x33363a, 0.9, 0.35, 1.1), 'plain'),
     bucket: uber(std('bucket', 0xb8bcc0, 1.0, 0.25, 1.15), 'turned', { rough: 0.05, axis: Y }),
+    // enamelled copper of the stator windings, seen through the alternator's vents
+    winding: uber(std('stator_winding', 0x5a3219, 0.8, 0.5, 0.8), 'plain'),
     bronze: uber(std('copper_lead_bearing', 0xb07a52, 1.0, 0.32, 1.1), 'plain'),
     bolt: uber(std('zinc_bolt', 0xb5b8bb, 1.0, 0.35, 1.1), 'plain'),
-    // cam cover: dark satin wrinkle paint
-    cover: uber(std('wrinkle_paint', 0x1b1c1f, 0.15, 0.5, 0.75), 'wrinkle', { rough: 0.12, bump: 0.00035, speck: 0.35, speckColor: 0x2c2d31 }),
+    // cam cover: dark satin wrinkle paint; the wrinkle is relief and sheen, not colour
+    cover: uber(std('wrinkle_paint', 0x1d1e21, 0.1, 0.56, 0.8), 'wrinkle', { cell: 0.0028, rough: 0.10, bump: 0.00022, speck: 0 }),
     belt: uber(std('epdm_belt', 0x121314, 0, 0.85, 0.6), 'belt', { bump: 0.0002, b: [0.008, 0, 0, 0] }),
     vbelt: uber(std('poly_v_belt', 0x141516, 0, 0.8, 0.6), 'belt', { bump: 0.0002, b: [0.0036, 0, 0, 0] }),
     // moulded glass-filled nylon: satin, so the timing cover's form reads
@@ -333,7 +412,9 @@ export function makeMaterials() {
     // satin black paint on a pressed-steel sump: lifted enough to hold its form
     pan: uber(std('satin_pan', 0x35383c, 0.2, 0.44, 1.0), 'cast', { cell: 0.002, rough: 0.05, bump: 0.0002, speck: 0 }),
     // oil filter: dark automotive blue, painted can
-    filter: uber(std('oil_filter', 0x1f2c40, 0.3, 0.38, 0.9), 'plain'),
+    // oil filter: a printed steel can, matte, in a dark automotive blue
+    filter: uber(std('oil_filter', 0x22324a, 0.15, 0.62, 0.7), 'cast', { cell: 0.002, rough: 0.04, bump: 0.00005, speck: 0 }),
+    filterPrint: uber(std('filter_print', 0x6f7c8e, 0.1, 0.6, 0.6), 'plain'),
     handle: uber(std('dipstick_handle', 0xd6961c, 0, 0.5, 0.6), 'plain'),
     copper: uber(std('copper_badge', 0xa8683a, 1.0, 0.44, 0.9), 'turned', { rough: 0.05, axis: new THREE.Vector3(0, 1, 0) }),
     ironCast: uber(std('cast_iron', 0x4a4d51, 0.8, 0.55, 1.0), 'cast', { cell: 0.0014, rough: 0.07, bump: 0.0004, speck: 0.3, speckColor: 0x3a3c3f }),

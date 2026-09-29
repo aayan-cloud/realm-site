@@ -22,6 +22,30 @@ import { coverageClip } from './materials.js';
 export const BIAS = 128;
 const _c = new THREE.Vector3();
 
+// three r149 sets one stencil op for both faces. A counting pass needs two: back
+// faces increment and front faces decrement (the other way round for a cavity).
+// The renderer's stencil state is wrapped once: when a counting pass is about to
+// be drawn (PENDING is its sign, set in the helper's onBeforeRender, which three
+// calls just before it sets the material's state), the ops are set per face with
+// stencilOpSeparate, and three's cache is left on ZERO, an op nothing in the
+// scene uses, so the next material that writes the stencil sets its own ops for
+// both faces again.
+let PENDING = 0;
+function _count(renderer) {
+  const st = renderer.state.buffers.stencil;
+  if (st.rhSeparate) return;
+  st.rhSeparate = true;
+  const gl = renderer.getContext(), op = st.setOp;
+  st.setOp = function (f, zf, zp) {
+    if (!PENDING) return op.call(st, f, zf, zp);
+    const add = PENDING > 0 ? gl.INCR_WRAP : gl.DECR_WRAP, sub = PENDING > 0 ? gl.DECR_WRAP : gl.INCR_WRAP;
+    PENDING = 0;
+    op.call(st, gl.ZERO, gl.ZERO, gl.ZERO);
+    gl.stencilOpSeparate(gl.BACK, add, add, add);
+    gl.stencilOpSeparate(gl.FRONT, sub, sub, sub);
+  };
+}
+
 export class Capper {
   constructor(paintMaterial, size = 1.4) {
     this.plane = null;
@@ -51,11 +75,11 @@ export class Capper {
     this.cap.castShadow = false;
     this.cap.receiveShadow = true;
     this.cap.visible = false;
-    this.back = this._mat(THREE.BackSide, THREE.IncrementWrapStencilOp);
-    this.front = this._mat(THREE.FrontSide, THREE.DecrementWrapStencilOp);
-    // a cavity counts the other way round
-    this.cBack = this._mat(THREE.BackSide, THREE.DecrementWrapStencilOp);
-    this.cFront = this._mat(THREE.FrontSide, THREE.IncrementWrapStencilOp);
+    // One double-sided pass per solid: back faces add one and front faces take one
+    // away in the same draw (stencilOpSeparate, see _count). Two single-sided
+    // passes drew every cut solid twice, which was a sixth of the scene's
+    // triangles once the section was open.
+    this.count = this._mat(THREE.DoubleSide, THREE.IncrementWrapStencilOp);
   }
 
   // The count passes clip with coverage, not a hard discard, so under MSAA the
@@ -71,16 +95,17 @@ export class Capper {
   }
 
   _helpers(parent, geometry, name, n = 1, swap = false, inst = null) {
-    const out = [];
-    for (let k = 0; k < n; k++) for (const m of [this.back, this.front]) {
-      const mat = swap ? (m === this.back ? this.cBack : this.cFront) : m;
-      const h = inst ? new THREE.InstancedMesh(geometry, mat, inst.count) : new THREE.Mesh(geometry, mat);
+    const out = [], sign = swap ? -1 : 1;
+    for (let k = 0; k < n; k++) {
+      const h = inst ? new THREE.InstancedMesh(geometry, this.count, inst.count) : new THREE.Mesh(geometry, this.count);
       if (inst) { h.instanceMatrix = inst.instanceMatrix; h.frustumCulled = false; }
       h.renderOrder = 1;
       h.castShadow = false; h.receiveShadow = false;
       h.visible = false;
-      h.name = name + (m === this.back ? '_sb' : '_sf');
+      h.name = name + '_s';
       h.userData.helper = true;
+      h.onBeforeRender = r => { _count(r); PENDING = sign; };
+      h.onAfterRender = () => { PENDING = 0; };
       parent.add(h);
       this.helpers.push(h);
       out.push(h);
@@ -107,7 +132,7 @@ export class Capper {
   setPlane(plane) {
     if (plane === this.plane) return;
     this.plane = plane;
-    for (const m of [this.back, this.front, this.cBack, this.cFront]) { m.clippingPlanes = [plane]; m.needsUpdate = true; }
+    this.count.clippingPlanes = [plane]; this.count.needsUpdate = true;
   }
 
   _span(bb, matrixWorld) {
@@ -145,7 +170,10 @@ export class Capper {
     if (on && this.plane) {
       const n = this.plane.normal;
       const p = this.plane.projectPoint(centre, new THREE.Vector3());
-      this.cap.position.copy(p);
+      // 0.3 mm proud of the plane, toward the side that has been cut away: the
+      // coverage ramp on a cut face reaches at most 0.2 mm in front of the plane
+      // (materials.js, CLIP), so the paint now covers it wherever there is metal
+      this.cap.position.copy(p).addScaledVector(n, -0.0003);
       this.cap.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), n.clone().negate());
     }
   }

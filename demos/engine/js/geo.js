@@ -244,6 +244,67 @@ export function creased(g, angle = 34) {
   return g;
 }
 
+// ---------------------------------------------------------------- skin
+// A closed slab whose outer face is the height field z = sz * f(x, y), sampled on
+// the grid xs by ys, with its inner face t behind it: a cast wall that follows
+// what it encloses (a water jacket over the barrels). Each triangle is wound
+// against a known outward direction (+-z on the faces, +-x or +-y on the rims),
+// which for a height field is exact, so the solid is closed and counts correctly
+// in the section stencil however steep the fillets get.
+export function skinSolid(xs, ys, f, t, sz = 1) {
+  const nx = xs.length, ny = ys.length, O = [], I = [];
+  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+    const z = f(xs[i], ys[j]);
+    O.push([xs[i], ys[j], sz * z]); I.push([xs[i], ys[j], sz * (z - t)]);
+  }
+  const at = (A, i, j) => A[i * ny + j], pos = [];
+  const tri = (a, b, c, o) => {
+    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+    const d = (uy * vz - uz * vy) * o[0] + (uz * vx - ux * vz) * o[1] + (ux * vy - uy * vx) * o[2];
+    if (d >= 0) pos.push(...a, ...b, ...c); else pos.push(...a, ...c, ...b);
+  };
+  const quad = (a, b, c, d, o) => { tri(a, b, c, o); tri(a, c, d, o); };
+  for (let i = 0; i < nx - 1; i++) for (let j = 0; j < ny - 1; j++) {
+    quad(at(O, i, j), at(O, i + 1, j), at(O, i + 1, j + 1), at(O, i, j + 1), [0, 0, sz]);
+    quad(at(I, i, j), at(I, i + 1, j), at(I, i + 1, j + 1), at(I, i, j + 1), [0, 0, -sz]);
+  }
+  for (let i = 0; i < nx - 1; i++) {
+    quad(at(O, i, 0), at(O, i + 1, 0), at(I, i + 1, 0), at(I, i, 0), [0, -1, 0]);
+    quad(at(O, i, ny - 1), at(O, i + 1, ny - 1), at(I, i + 1, ny - 1), at(I, i, ny - 1), [0, 1, 0]);
+  }
+  for (let j = 0; j < ny - 1; j++) {
+    quad(at(O, 0, j), at(O, 0, j + 1), at(I, 0, j + 1), at(I, 0, j), [-1, 0, 0]);
+    quad(at(O, nx - 1, j), at(O, nx - 1, j + 1), at(I, nx - 1, j + 1), at(I, nx - 1, j), [1, 0, 0]);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((pos.length / 3) * 2), 2));
+  return creased(g, 40);
+}
+// A triangle soup for a closed solid built by hand: each triangle is wound to
+// face the outward hint given with it, then normals are creased as usual.
+export class Tris {
+  constructor() { this.pos = []; }
+  tri(a, b, c, o) {
+    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+    const d = (uy * vz - uz * vy) * o[0] + (uz * vx - ux * vz) * o[1] + (ux * vy - uy * vx) * o[2];
+    if (d >= 0) this.pos.push(...a, ...b, ...c); else this.pos.push(...a, ...c, ...b);
+  }
+  quad(a, b, c, d, o) { this.tri(a, b, c, o); this.tri(a, c, d, o); }
+  build(angle = 40) {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((this.pos.length / 3) * 2), 2));
+    return creased(g, angle);
+  }
+}
+
+// sample points from a to b, n steps, bunched toward both ends when k > 0
+export const span = (a, b, n, k = 0) => Array.from({ length: n + 1 }, (_, i) => {
+  const u = i / n, w = u - k * Math.sin(2 * Math.PI * u) / (2 * Math.PI);
+  return a + (b - a) * w;
+});
+
 // a hexagon prism about Y with flat faces (bolt heads, nuts)
 export function hexPrism(r, h, y0 = -h / 2) {
   const g = new THREE.CylinderGeometry(r, r, h, 6, 1, false).toNonIndexed();
