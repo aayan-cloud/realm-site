@@ -4,12 +4,12 @@
   "number": "03",
   "service_name": "AI receptionist",
   "page_title": "AI receptionist - Realm Systems",
-  "meta_description": "Miss a call on a job and it texts them back in seconds, collects the whole job and sends it to you as one text. $499 setup, then $149 a month.",
+  "meta_description": "Miss a call on a job and it texts them back in seconds, or picks up with a voice, collects the whole job and sends it to you as one text. $499 setup, then $149 a month, or $299 with voice.",
   "hero": {
-    "eyebrow_right": "$499 setup, then $149 a month",
+    "eyebrow_right": "$499 setup · $149 or $299 a month",
     "headline_line1": "Missed a call on a job?",
     "headline_line2": "It texts them back in seconds.",
-    "lead": "When you can't pick up, the caller gets a text straight away. The assistant collects the whole job, one question at a time, and sends it to your phone as one text."
+    "lead": "When you can't pick up, the caller gets a text straight away. The assistant collects the whole job, one question at a time, and sends it to your phone as one text. Or, on the Voice tier, it picks up the call itself and asks out loud."
   },
   "problem": {
     "headline": "The phone rings when your hands are full.",
@@ -44,6 +44,10 @@
         "text": "When the enquiry is complete, one text lands on your phone with all of it. If the customer goes quiet, you get whatever was collected so far."
       },
       {
+        "title": "Or a voice that picks up",
+        "text": "On the Voice tier it answers the calls you miss itself, says it is the automated assistant for your business, asks the same questions out loud and texts you the whole job when the call ends."
+      },
+      {
         "title": "Safety line first",
         "text": "Gas smell, carbon monoxide alarm, sparking, or water near electrics: it gives the safety line before it asks anything else."
       },
@@ -67,7 +71,7 @@
   },
   "price": {
     "amount": "$499 setup, then $149 a month",
-    "terms": "Setup covers wiring it to your number and testing it on your real line. You pay the setup on delivery, once you have seen it answer, then $149 a month while it runs.",
+    "terms": "Setup covers wiring it to your number and testing it on your real line. You pay the setup on delivery, once you have seen it answer, then $149 a month while it runs, or $299 a month with voice answering.",
     "included": [
       "A text back within seconds on every missed call",
       "The same assistant on your website as web chat",
@@ -75,8 +79,36 @@
       "The whole job texted to you when it is complete, and whatever was collected if the customer goes quiet",
       "Runs on a model we host, nothing used for training"
     ],
-    "extras": "Texts run on a phone number from Twilio or Telnyx, on your own account: about $1 to $2 a month plus about a cent per text. WhatsApp needs a WhatsApp Business number as well. Want it to answer the call itself, with a voice? That is the Voice tier: $499 setup, then $299 a month, built on your line and paid on delivery like the rest. Call minutes run on the same number, about a cent a minute, billed to you directly.",
-    "note": "Pay on delivery, once you have seen it answering for your real business, not a mockup."
+    "extras": "Texts and calls run on a phone number from Twilio or Telnyx, on your own account: about $1 to $2 a month, plus about a cent per text and about a cent a minute for voice calls, paid to them directly, not to us. WhatsApp needs a WhatsApp Business number as well.",
+    "note": "Pay on delivery, once you have seen it answering for your real business, not a mockup.",
+    "headline": "Two ways it answers.",
+    "tiers": [
+      {
+        "name": "01 / Text-back",
+        "amount": "$149",
+        "sub": "a month, after $499 setup",
+        "text": "Miss a call and the caller gets a text within seconds. The assistant collects the job over text and sends it to you as one message.",
+        "items": [
+          "A text back within seconds on every missed call",
+          "The same assistant on your website as web chat",
+          "The safety line first for gas, carbon monoxide, sparking or water near electrics",
+          "The whole job texted to you, or whatever was collected if they go quiet"
+        ]
+      },
+      {
+        "name": "02 / Voice",
+        "amount": "$299",
+        "sub": "a month, after $499 setup",
+        "text": "It picks up the calls you miss itself. It says it is the automated assistant for your business, asks the same questions out loud, and texts you the whole job when the call ends.",
+        "items": [
+          "Answers the missed call out loud, day or night",
+          "Name, address, the problem, how urgent and a good time, one question at a time",
+          "The safety line spoken before anything else",
+          "Everything in Text-back as well, including the web chat",
+          "Set up on your line when you sign, and paid for only once you have heard it answer"
+        ]
+      }
+    ]
   },
   "faq": [
     {
@@ -84,12 +116,16 @@
       "a": "Your phone forwards unanswered calls to a number we set up on your account. The moment a call lands there unanswered, the caller gets the first text. Calls you answer never touch it."
     },
     {
+      "q": "How does the Voice tier work?",
+      "a": "Your phone forwards the calls you miss to the number on your account, and instead of texting, the assistant picks up. It says straight away that it is the automated assistant for your business, asks the same questions as the text version out loud, one at a time, and when the call ends the whole job lands on your phone as one text. The call runs on the number on your own Twilio or Telnyx account, and the conversation is run by the same model we host. It is set up on your line when you sign, and you pay the setup once you have heard it answer."
+    },
+    {
       "q": "Will customers know it is not a person?",
       "a": "Yes. Its first message says it is the automated assistant for your business. Asked if it is a real person, it says it is not, and that you, a real person, will text back. That is one of 17 scripted customers we test it against. The others include a gas smell, a price hunter, an angry customer, a Polish speaker and someone fishing for a discount code."
     },
     {
       "q": "What will it not do?",
-      "a": "This tier does not answer the call with a voice. It texts back. Voice answering is the Voice tier, $299 a month. It never quotes prices, never books a slot, never promises an arrival time and never takes payment. If a customer asks something it has not been told about your business, it says it will pass that to you and moves on."
+      "a": "The Text-back tier does not answer the call with a voice. It texts back. Voice answering is the Voice tier, $299 a month. Neither tier quotes prices, books a slot, promises an arrival time or takes payment. If a customer asks something it has not been told about your business, it says it will pass that to you and moves on."
     },
     {
       "q": "What happens if someone smells gas?",
@@ -101,7 +137,7 @@
     },
     {
       "q": "What happens after delivery?",
-      "a": "It runs on our server for $149 a month. Your name, hours, services, area and emergency lines sit in one file, so new hours or a new service is a text to us, not a rebuild. The Twilio or Telnyx number stays on your own account, about $1 to $2 a month plus about a cent per text."
+      "a": "It runs on our server for $149 a month, or $299 a month on the Voice tier. Your name, hours, services, area and emergency lines sit in one file, so new hours or a new service is a text to us, not a rebuild. The Twilio or Telnyx number stays on your own account, about $1 to $2 a month plus about a cent per text and a cent a minute for calls."
     }
   ],
   "close": {

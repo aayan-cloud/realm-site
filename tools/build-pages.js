@@ -61,6 +61,9 @@ const EXHIBITS = {
   '3d': () => article('pcbuild'),
 };
 
+// a service sold in tiers: one column per tier, the shared small print under them
+const tiers = (pr) => `<h2>${esc(pr.headline)}</h2><div class="tiers">${pr.tiers.map((t) => `<div class="tier"><span class="eyebrow">${esc(t.name)}</span><strong>${esc(t.amount)}</strong><small>${esc(t.sub)}</small><p>${esc(t.text)}</p><ul>${t.items.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>`).join('')}</div><div class="tiers__notes"><p>${esc(pr.extras)}</p><p>${esc(pr.note)}</p></div>`;
+
 function servicePage(p) {
   const nn = (i) => String(i + 1).padStart(2, '0');
   const body = `<section class="hero svc-hero" id="top"><div class="wrap">
@@ -74,7 +77,7 @@ function servicePage(p) {
 <section class="block svc-proof" id="proof"><div class="wrap"><div class="section-top"><span class="eyebrow">Proof</span><span class="mono">03 / 05</span></div><h2>${esc(p.proof.headline)}</h2>
 ${EXHIBITS[p.slug]()}
 <p class="proof-caption">${esc(p.proof.caption)}</p></div></section>
-<section class="block" id="price"><div class="wrap"><div class="section-top"><span class="eyebrow">What it costs</span><span class="mono">04 / 05</span></div><div class="pricerow"><div><strong>${esc(p.price.amount)}</strong><small>${esc(p.price.terms)}</small></div><div><ul>${p.price.included.map((s) => `<li>${esc(s)}</li>`).join('')}</ul><p>${esc(p.price.extras)}</p><p>${esc(p.price.note)}</p></div></div></div></section>
+<section class="block" id="price"><div class="wrap"><div class="section-top"><span class="eyebrow">What it costs</span><span class="mono">04 / 05</span></div>${p.price.tiers ? tiers(p.price) : `<div class="pricerow"><div><strong>${esc(p.price.amount)}</strong><small>${esc(p.price.terms)}</small></div><div><ul>${p.price.included.map((s) => `<li>${esc(s)}</li>`).join('')}</ul><p>${esc(p.price.extras)}</p><p>${esc(p.price.note)}</p></div></div>`}</div></section>
 ${PROCESS}
 <section class="block" id="faq"><div class="wrap"><div class="section-top"><span class="eyebrow">Questions</span><span class="mono">05 / 05</span></div><div class="faq">${p.faq.map((x) => `<details><summary>${esc(x.q)}</summary><p>${esc(x.a)}</p></details>`).join('')}</div></div></section>
 ${closing(p.want, p.close.headline_line1, p.close.headline_line2)}`;

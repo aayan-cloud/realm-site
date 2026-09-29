@@ -757,6 +757,8 @@ function sizeCanvases() {
 }
 addEventListener('resize', sizeCanvases);
 
+// both plots are inset this far on each side: room for the 0 and 720 labels
+const PADX = 12;
 function drawDiagram(crank) {
   if (!dW || !dH) return;
   dctx.setTransform(dDPR, 0, 0, dDPR, 0, 0);
@@ -767,7 +769,7 @@ function drawDiagram(crank) {
   // The stroke names have a lane of their own at the top of the plot, and every
   // trace starts under it: with the names over the pressure band, the hump after
   // TDC rose through POWER and the names sat on the traces on short screens.
-  const padL = 26, padR = 6, padT = 22, padB = 15, LANE = 14;
+  const padL = PADX, padR = PADX, padT = 22, padB = 15, LANE = 14;
   const W = dW - padL - padR, H = dH - padT - padB;
   const X = a => padL + (a / 720) * W;
   const Y = (v, top, hh) => padT + top + (1 - v) * hh;
@@ -793,7 +795,7 @@ function drawDiagram(crank) {
   dctx.textAlign = 'center';
   for (let a = 0; a <= 720; a += 90) {
     dctx.beginPath(); dctx.moveTo(X(a), padT); dctx.lineTo(X(a), padT + H); dctx.stroke();
-    if (a < 720) dctx.fillText(String(a), X(a), dH - 3);
+    dctx.fillText(String(a), X(a), dH - 3);
   }
 
   dctx.beginPath();
@@ -823,10 +825,9 @@ function drawDiagram(crank) {
   curve(CURVE.exhaust, 'rgba(255,110,50,.85)', 1.1);
 
   dctx.fillStyle = 'rgba(255,190,130,.95)';
-  dctx.textAlign = 'left';
   FIRE_ANGLE.forEach((a, i) => {
     dctx.fillRect(X(a) - 0.5, padT - 7, 1, 7);
-    dctx.fillText(String(i + 1), X(a) + 3, 11);
+    dctx.fillText(String(i + 1), X(a), 11);
   });
 
   const px = X(crank);
@@ -913,7 +914,8 @@ function drawChart(rpm) {
   // With the caption hidden (short screens) the curve names itself, in a band of its
   // own above the plot: drawn over the plot, the curve ran through the words.
   const padT = chartLabel ? 17 : 5, padB = 4, H = tH - padT - padB, W = tW;
-  const X = r => ((clamp(r, 800, SPEC.redline) - 800) / (SPEC.redline - 800)) * W;
+  // same side insets as the cam card above, so the two plots share their edges
+  const X = r => PADX + ((clamp(r, 800, SPEC.redline) - 800) / (SPEC.redline - 800)) * (W - 2 * PADX);
   // the full-load curve bounds every live point (less load is less power at any
   // speed), and overrun, where the power is negative, sits on the baseline
   const top = Math.max(CHART_TOP, CHART.maxKw) * 1.06;
@@ -947,7 +949,7 @@ function drawChart(rpm) {
   tctx.fillStyle = 'rgba(255,217,168,.16)';
   tctx.fillRect(Math.round(mx) - 0.5, padT, 1, H);
   tctx.fillStyle = '#ffd9a8';
-  tctx.beginPath(); tctx.arc(clamp(mx, 3, W - 3), clamp(my, padT + 3, padT + H - 1), 2.8, 0, Math.PI * 2); tctx.fill();
+  tctx.beginPath(); tctx.arc(clamp(mx, PADX, W - PADX), clamp(my, padT + 3, padT + H - 1), 2.8, 0, Math.PI * 2); tctx.fill();
 }
 
 // ---------------------------------------------------------------- readout

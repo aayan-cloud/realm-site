@@ -59,7 +59,7 @@
   },
   "proof": {
     "headline": "Built, not mocked up. Scroll it.",
-    "caption": "Two live examples in one frame. The first is the white PC page built for Tech Homan: every part modelled from the maker's photos and rendered in Blender, 72 frames of a full turn and 48 of it coming apart, with real part prices, $1,533.49 in total, PCPartPicker US pricing checked 15 Sep 2026, not live. The second is a four-stroke engine built entirely in code and running live in your browser: hold the throttle, cut it open, change the compression ratio. Switch between them above the frame and scroll inside it."
+    "caption": "Two live examples in one frame. The first is a four-stroke engine built entirely in code and running live in your browser: hold the throttle, cut it open, change the compression ratio. The second is the white PC page built for Tech Homan: every part modelled from the maker's photos and rendered in Blender, 72 frames of a full turn and 48 of it coming apart, with real part prices, $1,533.49 in total, PCPartPicker US pricing checked 15 Sep 2026, not live. Switch between them above the frame and scroll inside it."
   },
   "price": {
     "amount": "$4,000",
