@@ -57,7 +57,7 @@ const closing = (want, l1, l2) => CLOSE
 const EXHIBITS = {
   receptionist: () => read('pages/receptionist-proof.html'),
   websites: () => article('apex'),
-  automation: () => article('lead-project') + '\n' + article('ad-project'),
+  automation: () => article('lead-project'),
   '3d': () => article('pcbuild'),
 };
 
@@ -87,7 +87,7 @@ ${closing(p.want, p.close.headline_line1, p.close.headline_line2)}`;
 function workPage() {
   const body = WORK.replace('<span class="mono">01 / 04</span>', '<span class="mono">01 / 04</span>')
     + '\n' + closing('', 'Tell us the', 'business and the city.');
-  return shell({ title: 'Selected work - Realm Systems', description: 'Four things that exist: a live website, a 3D product site you can take apart, a lead system and an ad engine. Built, not mocked up.', body, want: '', canonical: 'work' });
+  return shell({ title: 'Selected work - Realm Systems', description: 'Three things that exist: a four-stroke engine and a PC you can take apart, a live website, and an automation we run ourselves. Built, not mocked up.', body, want: '', canonical: 'work' });
 }
 
 function privacyPage(d) {
