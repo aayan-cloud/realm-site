@@ -4,9 +4,9 @@
   "number": "04",
   "service_name": "Automation or an AI agent",
   "page_title": "Automation or an AI agent - Realm Systems",
-  "meta_description": "An automation or an AI agent built for the one job that eats your week: chasing quotes, copying enquiries across, sending the same reminder. From $2,500, quoted per job.",
+  "meta_description": "An automation or an AI agent built for the one job that eats your week: chasing quotes, copying enquiries across, sending the same reminder. Quoted per job, paid on delivery.",
   "hero": {
-    "eyebrow_right": "From $2,500, quoted per job",
+    "eyebrow_right": "Quoted per job",
     "headline_line1": "The same admin, every week.",
     "headline_line2": "We build the system that does it.",
     "lead": "An automation or an AI agent built for the one job that eats your week: chasing quotes that went quiet, copying the same customer into three places, sending the same reminder. Quoted once we know what it is."
@@ -58,7 +58,7 @@
     "caption": "The lead system above is an automation we built and run for our own business: it searches Google Maps for businesses with plenty of reviews and no website, checks each one, and drafts a message for every lead. Some steps run on their own and some are run by hand. Want one like it, pointed at your own customers? It is quoted like any other automation."
   },
   "price": {
-    "amount": "From $2,500",
+    "amount": "Pay on delivery.",
     "terms": "Quoted per job once we know what it needs to do. The price and the delivery date go in writing before we start.",
     "included": [
       "Built around the one job you name",
@@ -66,8 +66,8 @@
       "The workflow files, yours on delivery",
       "A fixed price and date in writing first"
     ],
-    "extras": "If it needs to answer the phone, that is the AI receptionist, its own service: $499 setup, then $149 a month ($299 a month with voice answering).",
-    "note": "Pay on delivery, and the automation or the agent is yours."
+    "extras": "If it needs to answer the phone, that is the AI receptionist, its own service.",
+    "note": "The automation or the agent is yours once you have paid."
   },
   "faq": [
     {
@@ -83,8 +83,8 @@
       "a": "The automation or the agent is yours. The files are handed over when you pay on delivery."
     },
     {
-      "q": "Why does it say from $2,500?",
-      "a": "Because we do not know what yours needs to do yet. Tell us the business and the job, and you get a fixed price and a delivery date in writing before any work starts. If it needs to answer the phone, that is the AI receptionist, priced separately, from $499 setup, then $149 a month."
+      "q": "Why is there no price on this page?",
+      "a": "Because we do not know what yours needs to do yet. Tell us the business and the job, and you get a fixed price and a delivery date in writing before any work starts. If it needs to answer the phone, that is the AI receptionist, its own service."
     }
   ],
   "close": {

@@ -4,9 +4,9 @@
   "number": "02",
   "service_name": "Website",
   "page_title": "Website - Realm Systems",
-  "meta_description": "A one-page website written from scratch and live in a week. $1,000 one-off, no template, no page builder, no monthly plan. You own the code.",
+  "meta_description": "A one-page website written from scratch and live in a week. No template, no page builder, no monthly plan. You own the code.",
   "hero": {
-    "eyebrow_right": "$1,000 one-off",
+    "eyebrow_right": "Live in a week",
     "headline_line1": "They look you up and find nothing.",
     "headline_line2": "One page, live in a week.",
     "lead": "A website written from scratch for your business. No template, no page builder, no monthly plan. You own the code."
@@ -29,7 +29,7 @@
     ]
   },
   "get": {
-    "headline": "What $1,000 gets you.",
+    "headline": "What you get.",
     "items": [
       {
         "title": "One page, written from scratch",
@@ -58,8 +58,8 @@
     "caption": "Apex Capital Advisors, a real estate finance firm in the United States. Written by hand, no template and no page builder. Its enquiry and loan-application forms email the owner, and the owner edits the wording through a small admin panel we built. Those two are quoted on top of the one page. Live at apexcapitaladvisors.net."
   },
   "price": {
-    "amount": "$1,000",
-    "terms": "One-off. One page, live in a week. More pages quoted.",
+    "amount": "Pay on delivery.",
+    "terms": "A fixed price and a delivery date in writing before we start. One page, live in a week. More pages quoted.",
     "included": [
       "One page, written from scratch by hand",
       "Online booking, on a free booking calendar",
@@ -67,12 +67,12 @@
       "The code, yours on delivery"
     ],
     "extras": "More pages are quoted per job once we know what they are.",
-    "note": "Pay on delivery. You see it working on your real business, not a mockup, before you pay."
+    "note": "You see it working on your real business, not a mockup, before you pay."
   },
   "faq": [
     {
       "q": "What does one page actually mean?",
-      "a": "One page. Written from scratch and live in a week for $1,000. If you need more pages, tell us what they are and we quote them before any work starts."
+      "a": "One page, written from scratch and live in a week. If you need more pages, tell us what they are and we quote them before any work starts."
     },
     {
       "q": "Will it put me at the top of Google?",
@@ -80,7 +80,7 @@
     },
     {
       "q": "What do I pay every month?",
-      "a": "Nothing to us. The $1,000 is one-off and the hosting costs nothing. The one running cost is the domain name, bought in your name from the domain company, and we tell you its price before you buy it. There is no page builder plan to keep paying."
+      "a": "Nothing to us. You pay once, on delivery, and the hosting costs nothing. The one running cost is the domain name, bought in your name from the domain company, and we tell you its price before you buy it. There is no page builder plan to keep paying."
     },
     {
       "q": "Is it a template or a page builder?",
